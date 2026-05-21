@@ -5446,7 +5446,8 @@ function applyRolePermissions() {
 
 // ══════ BONG BÓNG HỖ TRỢ DI CHUYỂN VÀ ẨN/HIỆN ══════
 function makeElementDraggable(el, onBtnClick) {
-  if (!el) return;
+  if (!el || el.dataset.draggableInitialized) return;
+  el.dataset.draggableInitialized = 'true';
   let startX = 0, startY = 0;
   let currentLeft = 0, currentTop = 0;
   let isDragging = false;
