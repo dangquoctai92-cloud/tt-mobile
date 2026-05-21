@@ -1133,7 +1133,7 @@ body.logged-in .chat-fab-wrap { display: block; }
   border: none; color: #fff; cursor: pointer;
   box-shadow: 0 6px 24px rgba(108,77,246,0.55), 0 2px 8px rgba(0,0,0,0.2);
   align-items: center; justify-content: center;
-  transition: transform 0.25s cubic-bezier(.34,1.56,.64,1), box-shadow 0.2s;
+  transition: transform 0.25s cubic-bezier(.34,1.56,.64,1), box-shadow 0.2s, width 0.25s ease, height 0.25s ease;
 }
 .chat-fab:hover {
   transform: scale(1.1) translateY(-2px);
@@ -1235,6 +1235,33 @@ body.logged-in .chat-fab-wrap { display: block; }
   border-color: #ef4444;
 }
 .chat-fab-wrap.fab-user-hidden, .notes-fab-wrap.fab-user-hidden {
+  display: none !important;
+}
+
+/* Minimized state for FAB wraps */
+.chat-fab-wrap.minimized .chat-fab,
+.notes-fab-wrap.minimized .notes-fab {
+  width: 14px;
+  height: 14px;
+  min-width: 14px;
+  min-height: 14px;
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.15), 0 2px 8px rgba(0,0,0,0.5);
+  cursor: pointer;
+  transform: none !important;
+}
+.chat-fab-wrap.minimized .chat-fab::before,
+.chat-fab-wrap.minimized .chat-fab::after,
+.notes-fab-wrap.minimized .notes-fab::before,
+.notes-fab-wrap.minimized .notes-fab::after,
+.chat-fab-wrap.minimized .chat-fab-badge,
+.chat-fab-wrap.minimized .fab-close-btn,
+.notes-fab-wrap.minimized .fab-close-btn {
+  display: none !important;
+}
+.chat-fab-wrap.minimized .chat-fab svg,
+.chat-fab-wrap.minimized .chat-fab i,
+.notes-fab-wrap.minimized .notes-fab svg,
+.notes-fab-wrap.minimized .notes-fab i {
   display: none !important;
 }
 
@@ -1477,7 +1504,7 @@ body.logged-in .chat-fab-wrap { display: block; }
   border: none; color: #fff; cursor: pointer;
   box-shadow: 0 6px 24px rgba(16,185,129,0.5), 0 2px 8px rgba(0,0,0,0.2);
   align-items: center; justify-content: center;
-  transition: transform 0.25s cubic-bezier(.34,1.56,.64,1), box-shadow 0.2s;
+  transition: transform 0.25s cubic-bezier(.34,1.56,.64,1), box-shadow 0.2s, width 0.25s ease, height 0.25s ease;
 }
 .notes-fab:hover {
   transform: scale(1.1) translateY(-2px);
@@ -5435,6 +5462,13 @@ function makeElementDraggable(el, onBtnClick) {
         e.stopPropagation();
         return;
       }
+      if (el.classList.contains('minimized')) {
+        const type = el.id.replace('-fab-wrap', '');
+        restoreFab(type);
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
       onBtnClick(e);
     });
   }
@@ -5526,6 +5560,36 @@ function makeElementDraggable(el, onBtnClick) {
   } catch (e) {}
 }
 
+function minimizeFab(type, event) {
+  if (event) {
+    event.stopPropagation();
+    event.preventDefault();
+  }
+  const el = document.getElementById(type + '-fab-wrap');
+  if (el) {
+    el.classList.add('minimized');
+    if (type === 'chat') {
+      if (typeof closeChat === 'function') closeChat();
+    } else if (type === 'notes') {
+      const popup = document.getElementById('notes-popup');
+      if (popup) popup.classList.remove('open');
+    }
+  }
+  try {
+    localStorage.setItem(type + '-fab-minimized', 'true');
+  } catch (e) {}
+}
+
+function restoreFab(type) {
+  const el = document.getElementById(type + '-fab-wrap');
+  if (el) {
+    el.classList.remove('minimized');
+  }
+  try {
+    localStorage.removeItem(type + '-fab-minimized');
+  } catch (e) {}
+}
+
 function hideFab(type, event) {
   if (event) {
     event.stopPropagation();
@@ -5565,12 +5629,15 @@ function toggleFabVisibility(type, show) {
 function initFabVisibility() {
   ['chat', 'notes'].forEach(type => {
     let isHidden = false;
+    let isMinimized = false;
     try {
       isHidden = localStorage.getItem(type + '-fab-hidden') === 'true';
+      isMinimized = localStorage.getItem(type + '-fab-minimized') === 'true';
     } catch (e) {}
     const el = document.getElementById(type + '-fab-wrap');
     if (el) {
       el.classList.toggle('fab-user-hidden', isHidden);
+      el.classList.toggle('minimized', isMinimized);
     }
     const chk = document.getElementById('chk-show-' + type + '-fab');
     if (chk) chk.checked = !isHidden;
@@ -5602,7 +5669,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 <!-- ══════ CHAT FAB + POPUP ══════ -->
 <div class="chat-fab-wrap" id="chat-fab-wrap">
-  <button class="fab-close-btn" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()" onclick="hideFab('chat', event)" title="Tắt bong bóng chat">&times;</button>
+  <button class="fab-close-btn" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()" onclick="minimizeFab('chat', event)" title="Thu nhỏ bong bóng chat">&times;</button>
   <button class="chat-fab" id="chat-fab" onclick="toggleChat()">
     <i data-lucide="message-circle" style="width:24px;height:24px"></i>
     <span class="chat-fab-badge" id="chat-fab-badge"></span>
@@ -5611,7 +5678,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 <!-- ══════ NOTES FAB + POPUP ══════ -->
 <div class="notes-fab-wrap" id="notes-fab-wrap">
-  <button class="fab-close-btn" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()" onclick="hideFab('notes', event)" title="Tắt bong bóng ghi chú">&times;</button>
+  <button class="fab-close-btn" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()" onclick="minimizeFab('notes', event)" title="Thu nhỏ bong bóng ghi chú">&times;</button>
   <button class="notes-fab" id="notes-fab" onclick="toggleNotesPopup(event)">
     <i data-lucide="notebook-pen" style="width:22px;height:22px"></i>
   </button>
