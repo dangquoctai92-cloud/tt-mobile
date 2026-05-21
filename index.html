@@ -5453,25 +5453,36 @@ function makeElementDraggable(el, onBtnClick) {
   let isDragging = false;
   let hasDragged = false;
 
-  const btn = el.querySelector('button.chat-fab, button.notes-fab');
+  // Lắng nghe click ở Capture Phase trên toàn bộ wrapper
+  // Điều này đảm bảo chặn đứng sự kiện trước khi nó tới được các nút bên trong
+  el.addEventListener('click', (e) => {
+    if (hasDragged) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      return;
+    }
+    if (el.classList.contains('minimized')) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      const type = el.id.replace('-fab-wrap', '');
+      restoreFab(type);
+      return;
+    }
+  }, true);
 
+  const btn = el.querySelector('button.chat-fab, button.notes-fab');
   if (btn) {
     btn.removeAttribute('onclick');
     btn.onclick = null;
     btn.addEventListener('click', (e) => {
-      if (hasDragged) {
-        e.preventDefault();
-        e.stopPropagation();
-        return;
-      }
-      if (el.classList.contains('minimized')) {
-        const type = el.id.replace('-fab-wrap', '');
-        restoreFab(type);
-        e.preventDefault();
-        e.stopPropagation();
-        return;
-      }
-      onBtnClick(e);
+      // Vì capture phase trên wrapper đã chặn các trường hợp kéo/thu nhỏ,
+      // nếu sự kiện đi tới được đây nghĩa là click bình thường
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      if (typeof onBtnClick === 'function') onBtnClick(e);
     });
   }
 
