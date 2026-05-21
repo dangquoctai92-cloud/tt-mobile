@@ -1004,7 +1004,7 @@ body.pre-auth #app { display: none !important; }
   z-index: 100;
   background: var(--bg2);
   border-bottom: 1px solid var(--border);
-  padding: 12px 16px;
+  padding: calc(12px + env(safe-area-inset-top, 0px)) 16px 12px 16px;
   align-items: center;
   justify-content: space-between;
 }
@@ -1128,7 +1128,7 @@ body.logged-in .chat-fab-wrap { display: block; }
 .chat-fab {
   display: flex;
   position: relative;
-  width: 58px; height: 58px; border-radius: 50%;
+  width: 52px; height: 52px; border-radius: 50%;
   background: linear-gradient(135deg, #3b8ced 0%, #6c4df6 100%);
   border: none; color: #fff; cursor: pointer;
   box-shadow: 0 6px 24px rgba(108,77,246,0.55), 0 2px 8px rgba(0,0,0,0.2);
@@ -1156,7 +1156,7 @@ body.logged-in .chat-fab-wrap { display: block; }
 }
 .chat-fab::after {
   content: '';
-  position: absolute; bottom: calc(100% + 4px); right: 22px;
+  position: absolute; bottom: calc(100% + 4px); right: 21px;
   border: 5px solid transparent;
   border-top-color: #1a1a2e;
   opacity: 0; transition: opacity 0.18s;
@@ -1206,6 +1206,36 @@ body.logged-in .chat-fab-wrap { display: block; }
   .chat-fab-badge.show,
   .chat-badge.show,
   .bn-chat-badge.show { animation: none; }
+}
+
+/* Close button for draggable FAB wraps */
+.fab-close-btn {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(15, 15, 17, 0.85);
+  border: 1.5px solid var(--border);
+  color: var(--text2);
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  z-index: 10;
+  transition: all 0.15s;
+}
+.fab-close-btn:hover {
+  background: #ef4444;
+  color: #fff;
+  border-color: #ef4444;
+}
+.chat-fab-wrap.fab-user-hidden, .notes-fab-wrap.fab-user-hidden {
+  display: none !important;
 }
 
 /* ══════ GHI CHÚ CÁ NHÂN ══════ */
@@ -1605,7 +1635,6 @@ body.logged-in .chat-fab-wrap { display: block; }
 @media (max-width: 640px) {
   .chat-fab-wrap { bottom: 80px; right: 16px; }
   .notes-fab-wrap { bottom: 80px; left: 16px; }
-  .notes-fab { width: 48px; height: 48px; }
 }
 @media (max-width: 480px) {
   .chat-popup {
@@ -2445,6 +2474,26 @@ function getChatSheet() {
             · Cập nhật: <span id="drive-storage-ts">…</span>
           </div>
           <div id="drive-storage-foot" class="g-storage-foot"></div>
+        </div>
+      </div>
+
+      <div class="section-card" style="margin-top:18px">
+        <div class="section-title">
+          <i data-lucide="layout" style="width:14px;height:14px;margin-right:6px;vertical-align:middle"></i>
+          Giao diện bong bóng hỗ trợ
+        </div>
+        <p style="margin:6px 0 12px;font-size:12px;color:var(--text3);line-height:1.55">
+          Bật hoặc tắt các bong bóng nổi hỗ trợ trên màn hình. Nếu tắt đi, bạn vẫn có thể bật lại tại đây.
+        </p>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:var(--text)">
+            <input type="checkbox" id="chk-show-chat-fab" onchange="toggleFabVisibility('chat', this.checked)">
+            <span>Hiển thị Bong bóng Chat nội bộ</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:var(--text)">
+            <input type="checkbox" id="chk-show-notes-fab" onchange="toggleFabVisibility('notes', this.checked)">
+            <span>Hiển thị Bong bóng Ghi chú nhanh</span>
+          </label>
         </div>
       </div>
     </div>
@@ -4561,6 +4610,7 @@ function loadSettingsForm() {
   }
 
   startDriveStorageAutoRefresh();
+  initFabVisibility();
 }
 function saveSettings() {
   const url = document.getElementById('cfg-script-url').value.trim();
@@ -5258,6 +5308,8 @@ function updateMobileHeader(user) {
 
 function initApp() {
   lucide.createIcons();
+  initFabVisibility();
+  initFabDraggability();
   // Hien thi du lieu local truoc (neu co), roi sync tu server
   renderTable(DB.tickets);
   updateDriveStatus(true);
@@ -5365,14 +5417,192 @@ function applyRolePermissions() {
   // admin: mặc định hiện tất cả, không cần ẩn gì
 }
 
+// ══════ BONG BÓNG HỖ TRỢ DI CHUYỂN VÀ ẨN/HIỆN ══════
+function makeElementDraggable(el, onBtnClick) {
+  if (!el) return;
+  let startX = 0, startY = 0;
+  let currentLeft = 0, currentTop = 0;
+  let isDragging = false;
+  let hasDragged = false;
+
+  const btn = el.querySelector('button.chat-fab, button.notes-fab');
+
+  if (btn) {
+    btn.removeAttribute('onclick');
+    btn.addEventListener('click', (e) => {
+      if (hasDragged) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+      onBtnClick(e);
+    });
+  }
+
+  el.addEventListener('mousedown', dragStart);
+  el.addEventListener('touchstart', dragStart, { passive: false });
+
+  function dragStart(e) {
+    if (e.type === 'mousedown' && e.button !== 0) return;
+    
+    isDragging = true;
+    hasDragged = false;
+    
+    const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+    const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+    
+    startX = clientX;
+    startY = clientY;
+    
+    const rect = el.getBoundingClientRect();
+    currentLeft = rect.left;
+    currentTop = rect.top;
+    
+    el.style.bottom = 'auto';
+    el.style.right = 'auto';
+    el.style.left = currentLeft + 'px';
+    el.style.top = currentTop + 'px';
+
+    document.addEventListener('mousemove', dragMove);
+    document.addEventListener('mouseup', dragEnd);
+    document.addEventListener('touchmove', dragMove, { passive: false });
+    document.addEventListener('touchend', dragEnd);
+  }
+
+  function dragMove(e) {
+    if (!isDragging) return;
+    if (e.cancelable) e.preventDefault();
+
+    const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+    const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+
+    const dx = clientX - startX;
+    const dy = clientY - startY;
+
+    if (Math.sqrt(dx*dx + dy*dy) > 6) {
+      hasDragged = true;
+    }
+
+    let newLeft = currentLeft + dx;
+    let newTop = currentTop + dy;
+    
+    const rect = el.getBoundingClientRect();
+    const minX = 8;
+    const maxX = window.innerWidth - rect.width - 8;
+    const minY = 8 + (document.getElementById('mobile-header') && window.getComputedStyle(document.getElementById('mobile-header')).display !== 'none' ? 60 : 0);
+    const maxY = window.innerHeight - rect.height - 8 - (document.getElementById('bottom-nav') && window.getComputedStyle(document.getElementById('bottom-nav')).display !== 'none' ? 64 : 0);
+    
+    newLeft = Math.max(minX, Math.min(maxX, newLeft));
+    newTop = Math.max(minY, Math.min(maxY, newTop));
+
+    el.style.left = newLeft + 'px';
+    el.style.top = newTop + 'px';
+  }
+
+  function dragEnd() {
+    isDragging = false;
+    document.removeEventListener('mousemove', dragMove);
+    document.removeEventListener('mouseup', dragEnd);
+    document.removeEventListener('touchmove', dragMove);
+    document.removeEventListener('touchend', dragEnd);
+    
+    if (hasDragged) {
+      try {
+        localStorage.setItem(el.id + '-left', el.style.left);
+        localStorage.setItem(el.id + '-top', el.style.top);
+      } catch (e) {}
+    }
+  }
+
+  try {
+    const savedLeft = localStorage.getItem(el.id + '-left');
+    const savedTop = localStorage.getItem(el.id + '-top');
+    if (savedLeft && savedTop) {
+      el.style.bottom = 'auto';
+      el.style.right = 'auto';
+      el.style.left = savedLeft;
+      el.style.top = savedTop;
+    }
+  } catch (e) {}
+}
+
+function hideFab(type, event) {
+  if (event) {
+    event.stopPropagation();
+    event.preventDefault();
+  }
+  const el = document.getElementById(type + '-fab-wrap');
+  if (el) {
+    el.classList.add('fab-user-hidden');
+  }
+  try {
+    localStorage.setItem(type + '-fab-hidden', 'true');
+  } catch (e) {}
+  const chk = document.getElementById('chk-show-' + type + '-fab');
+  if (chk) chk.checked = false;
+}
+
+function showFab(type) {
+  const el = document.getElementById(type + '-fab-wrap');
+  if (el) {
+    el.classList.remove('fab-user-hidden');
+  }
+  try {
+    localStorage.removeItem(type + '-fab-hidden');
+  } catch (e) {}
+  const chk = document.getElementById('chk-show-' + type + '-fab');
+  if (chk) chk.checked = true;
+}
+
+function toggleFabVisibility(type, show) {
+  if (show) {
+    showFab(type);
+  } else {
+    hideFab(type);
+  }
+}
+
+function initFabVisibility() {
+  ['chat', 'notes'].forEach(type => {
+    let isHidden = false;
+    try {
+      isHidden = localStorage.getItem(type + '-fab-hidden') === 'true';
+    } catch (e) {}
+    const el = document.getElementById(type + '-fab-wrap');
+    if (el) {
+      el.classList.toggle('fab-user-hidden', isHidden);
+    }
+    const chk = document.getElementById('chk-show-' + type + '-fab');
+    if (chk) chk.checked = !isHidden;
+  });
+}
+
+function initFabDraggability() {
+  const chatWrap = document.getElementById('chat-fab-wrap');
+  const notesWrap = document.getElementById('notes-fab-wrap');
+  if (chatWrap) {
+    makeElementDraggable(chatWrap, () => {
+      if (typeof toggleChat === 'function') toggleChat();
+    });
+  }
+  if (notesWrap) {
+    makeElementDraggable(notesWrap, (e) => {
+      if (typeof toggleNotesPopup === 'function') toggleNotesPopup(e);
+    });
+  }
+}
+
 // Khởi tạo icons khi trang load (cho login screen)
 document.addEventListener('DOMContentLoaded', () => {
   if (typeof lucide !== 'undefined') lucide.createIcons();
+  initFabVisibility();
+  initFabDraggability();
 });
 </script>
 
 <!-- ══════ CHAT FAB + POPUP ══════ -->
 <div class="chat-fab-wrap" id="chat-fab-wrap">
+  <button class="fab-close-btn" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()" onclick="hideFab('chat', event)" title="Tắt bong bóng chat">&times;</button>
   <button class="chat-fab" id="chat-fab" onclick="toggleChat()">
     <i data-lucide="message-circle" style="width:24px;height:24px"></i>
     <span class="chat-fab-badge" id="chat-fab-badge"></span>
@@ -5381,6 +5611,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 <!-- ══════ NOTES FAB + POPUP ══════ -->
 <div class="notes-fab-wrap" id="notes-fab-wrap">
+  <button class="fab-close-btn" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()" onclick="hideFab('notes', event)" title="Tắt bong bóng ghi chú">&times;</button>
   <button class="notes-fab" id="notes-fab" onclick="toggleNotesPopup(event)">
     <i data-lucide="notebook-pen" style="width:22px;height:22px"></i>
   </button>
