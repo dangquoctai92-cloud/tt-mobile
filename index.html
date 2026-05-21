@@ -2792,7 +2792,7 @@ function getChatSheet() {
       <span style="flex:1"></span>
       <button class="btn btn-ghost" onclick="closeForm()">Hủy</button>
       <button class="btn btn-yellow" id="btn-print-form" style="display:none" onclick="printCurrentTicket()"><i data-lucide="printer" style="width:13px;height:13px"></i> In phiếu</button>
-      <button class="btn btn-green" onclick="saveTicket()"><i data-lucide="save" style="width:13px;height:13px"></i> Lưu phiếu</button>
+      <button class="btn btn-green" onclick="saveTicket()"><i data-lucide="save" style="width:13px;height:13px"></i> <span id="btn-save-text">Lưu phiếu</span></button>
     </div>
   </div>
 </div>
@@ -4105,6 +4105,9 @@ function showForm(ticketId = null, readonly = false) {
   document.getElementById('btn-print-form').style.display = ticketId ? 'inline-flex' : 'none';
   const saveBtn = document.querySelector('.modal-footer .btn-green');
   if (saveBtn) saveBtn.style.display = readonly ? 'none' : 'inline-flex';
+  
+  const saveText = document.getElementById('btn-save-text');
+  if (saveText) saveText.textContent = ticketId ? 'Cập nhật' : 'Lưu phiếu';
   const formGrid = document.getElementById('form-main-grid');
   if (formGrid) formGrid.style.gridTemplateColumns = '1fr 1fr 1fr';
   const costTitle = document.getElementById('cost-handover-title');
