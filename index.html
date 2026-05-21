@@ -5549,16 +5549,62 @@ function makeElementDraggable(el, onBtnClick) {
   }
 
   try {
-    const savedLeft = localStorage.getItem(el.id + '-left');
-    const savedTop = localStorage.getItem(el.id + '-top');
-    if (savedLeft && savedTop) {
-      el.style.bottom = 'auto';
-      el.style.right = 'auto';
-      el.style.left = savedLeft;
-      el.style.top = savedTop;
+    const rawLeft = localStorage.getItem(el.id + '-left');
+    const rawTop = localStorage.getItem(el.id + '-top');
+    if (rawLeft && rawTop) {
+      const parsedLeft = parseFloat(rawLeft);
+      const parsedTop = parseFloat(rawTop);
+      if (!isNaN(parsedLeft) && !isNaN(parsedTop)) {
+        el.style.bottom = 'auto';
+        el.style.right = 'auto';
+        el.style.left = parsedLeft + 'px';
+        el.style.top = parsedTop + 'px';
+        
+        // Căn chỉnh lại tọa độ sau khi layout xong để không bị tràn màn hình (đặc biệt khi chuyển từ PC sang Mobile)
+        setTimeout(() => {
+          const rect = el.getBoundingClientRect();
+          const minX = 8;
+          const maxX = window.innerWidth - rect.width - 8;
+          const minY = 8 + (document.getElementById('mobile-header') && window.getComputedStyle(document.getElementById('mobile-header')).display !== 'none' ? 60 : 0);
+          const maxY = window.innerHeight - rect.height - 8 - (document.getElementById('bottom-nav') && window.getComputedStyle(document.getElementById('bottom-nav')).display !== 'none' ? 64 : 0);
+          
+          const clampedLeft = Math.max(minX, Math.min(maxX, parsedLeft));
+          const clampedTop = Math.max(minY, Math.min(maxY, parsedTop));
+          
+          el.style.left = clampedLeft + 'px';
+          el.style.top = clampedTop + 'px';
+        }, 150);
+      }
     }
   } catch (e) {}
 }
+
+function clampFabPosition(el) {
+  if (!el) return;
+  const rect = el.getBoundingClientRect();
+  const leftStr = el.style.left;
+  const topStr = el.style.top;
+  if (!leftStr || !topStr) return;
+  let currentLeft = parseFloat(leftStr);
+  let currentTop = parseFloat(topStr);
+  if (isNaN(currentLeft) || isNaN(currentTop)) return;
+  
+  const minX = 8;
+  const maxX = window.innerWidth - rect.width - 8;
+  const minY = 8 + (document.getElementById('mobile-header') && window.getComputedStyle(document.getElementById('mobile-header')).display !== 'none' ? 60 : 0);
+  const maxY = window.innerHeight - rect.height - 8 - (document.getElementById('bottom-nav') && window.getComputedStyle(document.getElementById('bottom-nav')).display !== 'none' ? 64 : 0);
+  
+  const clampedLeft = Math.max(minX, Math.min(maxX, currentLeft));
+  const clampedTop = Math.max(minY, Math.min(maxY, currentTop));
+  
+  el.style.left = clampedLeft + 'px';
+  el.style.top = clampedTop + 'px';
+}
+
+window.addEventListener('resize', () => {
+  clampFabPosition(document.getElementById('chat-fab-wrap'));
+  clampFabPosition(document.getElementById('notes-fab-wrap'));
+});
 
 function minimizeFab(type, event) {
   if (event) {
@@ -5631,6 +5677,12 @@ function initFabVisibility() {
     let isHidden = false;
     let isMinimized = false;
     try {
+      // Tự động chuyển đổi trạng thái ẩn cũ (nếu có) sang chế độ thu nhỏ (minimized) để hiển thị lại dưới dạng chấm nhỏ
+      if (localStorage.getItem(type + '-fab-hidden') === 'true' && !localStorage.getItem(type + '-fab-migrated-min')) {
+        localStorage.removeItem(type + '-fab-hidden');
+        localStorage.setItem(type + '-fab-minimized', 'true');
+        localStorage.setItem(type + '-fab-migrated-min', 'true');
+      }
       isHidden = localStorage.getItem(type + '-fab-hidden') === 'true';
       isMinimized = localStorage.getItem(type + '-fab-minimized') === 'true';
     } catch (e) {}
