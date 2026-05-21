@@ -1768,15 +1768,17 @@ body.logged-in .chat-fab-wrap { display: block; }
   <div class="main">
     <!-- PAGE: LIST -->
     <div class="page active" id="page-list">
-      <div class="page-title"><i data-lucide="clipboard-list" style="width:20px;height:20px;vertical-align:middle;margin-right:8px"></i>Danh Sách Phiếu</div>
-      <div class="page-sub">Quản lý tất cả phiếu sửa chữa</div>
-
-      <div class="drive-bar">
-        <div class="drive-dot" id="drive-dot" style="background:var(--green)"></div>
-        <span id="drive-status-text">Đã kết nối Google Sheets + Drive • Ảnh tự lưu lên Drive</span>
-        <span style="flex:1"></span>
-        <button class="btn btn-ghost" style="padding:4px 12px;font-size:11px" onclick="syncDrive()"><i data-lucide="refresh-cw" style="width:12px;height:12px"></i> Đồng bộ</button>
+      <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div>
+          <div class="page-title"><i data-lucide="clipboard-list" style="width:20px;height:20px;vertical-align:middle;margin-right:8px"></i>Danh Sách Phiếu</div>
+          <div class="page-sub">Quản lý tất cả phiếu sửa chữa</div>
+        </div>
+        <button class="btn btn-ghost" style="padding:7px 14px; font-size:12px; display:flex; align-items:center; gap:8px; margin-top:4px;" onclick="syncDrive()">
+          <i data-lucide="refresh-cw" style="width:14px;height:14px"></i> Đồng bộ
+          <div class="drive-dot" id="drive-dot" style="background:var(--green); width:8px; height:8px;"></div>
+        </button>
       </div>
+      <div id="drive-status-text" style="display:none;"></div>
 
       <!-- Ô tìm kiếm riêng cho mobile -->
       <div class="mobile-search">
@@ -2679,11 +2681,11 @@ function getChatSheet() {
           <div style="display:flex;flex-direction:column;gap:8px">
             <div class="field">
               <label>Tên khách hàng *</label>
-              <input type="text" id="f-customer" placeholder="Nguyễn Văn A" style="padding:7px 10px">
+              <input type="text" id="f-customer" style="padding:7px 10px">
             </div>
             <div class="field">
               <label>Số điện thoại</label>
-              <input type="text" id="f-phone" placeholder="0901234567" style="padding:7px 10px">
+              <input type="text" id="f-phone" style="padding:7px 10px">
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
               <div class="field">
@@ -2692,18 +2694,21 @@ function getChatSheet() {
               </div>
               <div class="field">
                 <label>Model máy</label>
-                <input type="text" id="f-model" placeholder="iPhone 15..." list="model-list" style="padding:7px 10px">
-                <datalist id="model-list"></datalist>
+                <div style="position:relative">
+                  <input type="text" id="f-model" autocomplete="off" oninput="filterModelDropdown()" onfocus="showModelDropdown()" style="padding:7px 30px 7px 10px; width:100%">
+                  <button type="button" tabindex="-1" onclick="toggleModelDropdown(event)" style="position:absolute; right:2px; top:50%; transform:translateY(-50%); background:none; border:none; padding:5px; color:var(--text2); cursor:pointer"><i data-lucide="chevron-down" style="width:16px;height:16px"></i></button>
+                  <div id="model-dropdown" style="display:none; position:absolute; top:calc(100% + 4px); left:0; right:0; max-height:220px; overflow-y:auto; background:var(--bg-card); border:1px solid var(--border); border-radius:6px; z-index:1000; box-shadow:0 4px 12px rgba(0,0,0,0.5)"></div>
+                </div>
               </div>
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
               <div class="field">
                 <label>IMEI / Serial</label>
-                <input type="text" id="f-imei" placeholder="358xxxxxxxxxx" style="padding:7px 10px">
+                <input type="text" id="f-imei" style="padding:7px 10px">
               </div>
               <div class="field">
                 <label>Mật khẩu máy</label>
-                <input type="text" id="f-password" placeholder="1234..." style="padding:7px 10px">
+                <input type="text" id="f-password" style="padding:7px 10px">
               </div>
             </div>
           </div>
@@ -2715,19 +2720,19 @@ function getChatSheet() {
           <div style="display:flex;flex-direction:column;gap:8px">
             <div class="field">
               <label>Lỗi khách báo</label>
-              <input type="text" id="f-problem" placeholder="Màn hình bị vỡ, không lên nguồn..." style="padding:7px 10px">
+              <input type="text" id="f-problem" style="padding:7px 10px">
             </div>
             <div class="field">
               <label>Tình trạng lúc nhận</label>
-              <input type="text" id="f-condition" placeholder="Vỏ xước nhẹ, màn ok..." style="padding:7px 10px">
+              <input type="text" id="f-condition" style="padding:7px 10px">
             </div>
             <div class="field">
               <label>Hướng xử lý (Chẩn đoán)</label>
-              <input type="text" id="f-diagnosis" placeholder="Thay màn hình, kiểm tra bo mạch..." style="padding:7px 10px">
+              <input type="text" id="f-diagnosis" style="padding:7px 10px">
             </div>
             <div class="field">
               <label>Phương pháp sửa / Linh kiện thay</label>
-              <input type="text" id="f-repair-method" placeholder="Thay màn zin, thay pin..." style="padding:7px 10px">
+              <input type="text" id="f-repair-method" style="padding:7px 10px">
             </div>
           </div>
         </div>
@@ -2739,17 +2744,17 @@ function getChatSheet() {
             <div id="cost-money-row" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
               <div class="field">
                 <label>Thu khách (VNĐ)</label>
-                <input type="number" id="f-total" placeholder="0" oninput="calcProfit()" style="padding:7px 10px">
+                <input type="number" id="f-total" oninput="calcProfit()" style="padding:7px 10px">
               </div>
               <div class="field">
                 <label>Tiền linh kiện (VNĐ)</label>
-                <input type="number" id="f-parts" placeholder="0" oninput="calcProfit()" style="padding:7px 10px">
+                <input type="number" id="f-parts" oninput="calcProfit()" style="padding:7px 10px">
               </div>
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
               <div class="field" id="profit-field">
                 <label>Lợi nhuận (VNĐ)</label>
-                <input type="text" id="f-profit" readonly placeholder="0" style="padding:7px 10px">
+                <input type="text" id="f-profit" readonly style="padding:7px 10px">
               </div>
               <div class="field">
                 <label>Trạng thái</label>
@@ -2768,7 +2773,7 @@ function getChatSheet() {
             </div>
             <div class="field">
               <label>Ghi chú nội bộ</label>
-              <textarea id="f-notes" placeholder="Ghi chú thêm..." style="min-height:42px;padding:6px 10px;resize:none"></textarea>
+              <textarea id="f-notes" style="min-height:42px;padding:6px 10px;resize:none"></textarea>
             </div>
           </div>
         </div>
@@ -3457,11 +3462,83 @@ function populateBrands() {
   updateModels();
 }
 function updateModels() {
+  filterModelDropdown();
+}
+
+function filterModelDropdown() {
   const brand = document.getElementById('f-brand').value;
   const models = BRANDS_MODELS[brand] || [];
-  const dl = document.getElementById('model-list');
-  dl.innerHTML = models.map(m => `<option value="${m}">`).join('');
+  const inp = document.getElementById('f-model');
+  const val = (inp.value || '').toLowerCase();
+  const drop = document.getElementById('model-dropdown');
+  if (!drop) return;
+  
+  drop.innerHTML = '';
+  const filtered = models.filter(m => m.toLowerCase().includes(val));
+  
+  if (filtered.length === 0) {
+    drop.style.display = 'none';
+    return;
+  }
+  
+  filtered.forEach(m => {
+    const d = document.createElement('div');
+    d.textContent = m;
+    d.style.padding = '10px 12px';
+    d.style.cursor = 'pointer';
+    d.style.borderBottom = '1px solid var(--border)';
+    d.style.color = 'var(--text)';
+    
+    d.onmouseover = () => d.style.background = 'rgba(255,255,255,0.08)';
+    d.onmouseout = () => d.style.background = 'transparent';
+    
+    d.onmousedown = function(e) {
+      e.preventDefault(); 
+      inp.value = m;
+      drop.style.display = 'none';
+      drop.dataset.forceOpen = 'false';
+    };
+    drop.appendChild(d);
+  });
+  
+  if (document.activeElement === inp || drop.dataset.forceOpen === 'true') {
+    drop.style.display = 'block';
+  }
 }
+
+function showModelDropdown() {
+  const drop = document.getElementById('model-dropdown');
+  if(drop) drop.dataset.forceOpen = 'true';
+  filterModelDropdown();
+}
+
+function toggleModelDropdown(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  const inp = document.getElementById('f-model');
+  const drop = document.getElementById('model-dropdown');
+  if (!drop) return;
+  if (drop.style.display === 'block') {
+    drop.style.display = 'none';
+    drop.dataset.forceOpen = 'false';
+  } else {
+    inp.focus();
+    drop.dataset.forceOpen = 'true';
+    filterModelDropdown();
+  }
+}
+
+document.addEventListener('mousedown', (e) => {
+  const drop = document.getElementById('model-dropdown');
+  if (drop && drop.style.display === 'block') {
+    const inp = document.getElementById('f-model');
+    const btn = inp.nextElementSibling;
+    if (!drop.contains(e.target) && e.target !== inp && (!btn || !btn.contains(e.target))) {
+      drop.style.display = 'none';
+      drop.dataset.forceOpen = 'false';
+    }
+  }
+});
 
 // ══════ IMAGE HANDLING ══════
 const IMG_SLOTS = [
