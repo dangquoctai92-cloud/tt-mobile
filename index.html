@@ -5457,6 +5457,7 @@ function makeElementDraggable(el, onBtnClick) {
 
   if (btn) {
     btn.removeAttribute('onclick');
+    btn.onclick = null;
     btn.addEventListener('click', (e) => {
       if (hasDragged) {
         e.preventDefault();
