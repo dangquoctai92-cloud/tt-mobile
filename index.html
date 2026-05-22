@@ -9,9 +9,12 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="T&T Mobile">
 <meta name="theme-color" content="#0f0f11">
+<link rel="icon" type="image/png" href="./logo.png">
+<link rel="apple-touch-icon" href="./logo.png">
 <title>T&T Mobile – Quản Lý Sửa Chữa Điện Thoại</title>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"></script>
 <style>
 :root {
   --bg: #0f0f11;
@@ -91,6 +94,12 @@ body.pre-auth #app { display: none !important; }
   align-items: center;
   justify-content: center;
   gap: 8px;
+}
+.app-logo {
+  display: inline-block;
+  object-fit: cover;
+  flex-shrink: 0;
+  vertical-align: middle;
 }
 .login-sub { color: var(--text2); font-size: 13px; margin-bottom: 36px; text-align: center; }
 .form-group { margin-bottom: 18px; }
@@ -932,6 +941,17 @@ body.pre-auth #app { display: none !important; }
   .user-action-btn { padding: 7px 16px; font-size: 12px; }
 }
 
+/* ══════ MOBILE-ONLY UTILITY ══════ */
+@media (min-width: 641px) {
+  .mobile-only { display: none !important; }
+}
+
+/* ══════ BARCODE SCANNER ANIMATION ══════ */
+@keyframes scan-line-anim {
+  0%, 100% { top: 10%; }
+  50% { top: 85%; }
+}
+
 /* ══════ BOTTOM NAV (mobile only) ══════ */
 .bottom-nav {
   display: none;
@@ -1074,8 +1094,12 @@ body.pre-auth #app { display: none !important; }
 .img-viewer-overlay.open { display: flex; }
 /* Thanh top: nút đóng */
 .img-viewer-close {
-  position: absolute; top: 14px; right: 16px; z-index: 20;
+  position: absolute;
+  top: calc(14px + env(safe-area-inset-top, 0px));
+  right: calc(16px + env(safe-area-inset-right, 0px));
+  z-index: 20;
   background: rgba(0,0,0,0.55); backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid rgba(255,255,255,0.2);
   color: #fff; border-radius: 50%; width: 38px; height: 38px;
   cursor: pointer;
@@ -1105,9 +1129,22 @@ body.pre-auth #app { display: none !important; }
 .img-viewer-ui {
   position: relative; z-index: 10;
   flex-shrink: 0;
-  display: flex; gap: 10px; align-items: center; justify-content: center;
-  padding: 14px 16px;
+  display: flex; gap: 12px; align-items: center; justify-content: center;
+  padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 0px)) 16px;
+  background: rgba(15,15,15,0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(255,255,255,0.08);
   white-space: nowrap;
+}
+.img-viewer-sub-row {
+  display: flex; gap: 12px; align-items: center;
+}
+.img-viewer-group {
+  display: flex; gap: 8px; align-items: center;
+}
+.img-viewer-divider {
+  width: 1px; height: 20px; background: rgba(255, 255, 255, 0.15); margin: 0 4px;
 }
 .img-nav-btn {
   background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2);
@@ -1124,6 +1161,63 @@ body.pre-auth #app { display: none !important; }
   line-height: 1; display: flex; align-items: center; justify-content: center;
 }
 .img-zoom-btn:hover { background: rgba(255,255,255,0.25); }
+
+/* Mobile optimization for Image Viewer */
+@media (max-width: 640px) {
+  .img-viewer-ui {
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px 16px calc(16px + env(safe-area-inset-bottom, 0px)) 16px;
+    white-space: normal;
+  }
+  .img-viewer-divider {
+    display: none;
+  }
+  .img-viewer-group.img-nav-group {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .img-viewer-group.img-nav-group .img-nav-btn {
+    flex: 1;
+    max-width: 130px;
+    justify-content: center;
+    padding: 10px 14px;
+    font-size: 14px;
+  }
+  .img-viewer-count {
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .img-viewer-sub-row {
+    width: 100%;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .img-viewer-group.img-zoom-group,
+  .img-viewer-group.img-action-group {
+    flex: 1;
+    justify-content: center;
+    gap: 6px;
+  }
+  .img-zoom-btn,
+  .img-viewer-sub-row .img-nav-btn {
+    padding: 10px 12px;
+    font-size: 14px;
+    min-height: 38px;
+    flex: 1;
+    justify-content: center;
+  }
+}
+@media (max-width: 400px) {
+  .img-viewer-ui .btn-text {
+    display: none;
+  }
+  .img-viewer-group.img-nav-group .img-nav-btn {
+    max-width: 50px;
+    padding: 10px;
+  }
+}
+
 
 /* ══════ CHAT ══════ */
 /* ══════ CHAT FAB + POPUP ══════ */
@@ -1690,7 +1784,7 @@ body.logged-in .chat-fab-wrap { display: block; }
 <!-- ══════ LOGIN SCREEN ══════ -->
 <div id="login-screen">
   <div class="login-box">
-    <div class="login-logo"><i data-lucide="wrench" style="width:24px;height:24px"></i>T&T Mobile</div>
+    <div class="login-logo"><img src="./logo.png" alt="Logo" class="app-logo" style="width:36px; height:36px; border-radius:8px">T&T Mobile</div>
     <div class="login-sub">Hệ thống quản lý sửa chữa điện thoại</div>
     <div class="form-group">
       <label>Tên đăng nhập</label>
@@ -1724,7 +1818,7 @@ body.logged-in .chat-fab-wrap { display: block; }
   <!-- MOBILE HEADER (chỉ hiện trên mobile) -->
   <div class="mobile-header" id="mobile-header">
     <div class="mobile-header-logo">
-      <i data-lucide="wrench" style="width:18px;height:18px"></i>
+      <img src="./logo.png" alt="Logo" class="app-logo" style="width:20px; height:20px; border-radius:5px">
       T&T Mobile
     </div>
     <div class="mobile-header-user">
@@ -1736,7 +1830,13 @@ body.logged-in .chat-fab-wrap { display: block; }
     </div>
   </div>
   <div class="sidebar">
-    <div class="sidebar-logo"><i data-lucide="wrench" style="width:20px;height:20px;vertical-align:middle;margin-right:6px"></i>T&T Mobile <span>Quản lý sửa chữa điện thoại</span></div>
+    <div class="sidebar-logo">
+      <div style="display:flex; align-items:center; gap:8px">
+        <img src="./logo.png" alt="Logo" class="app-logo" style="width:24px; height:24px; border-radius:6px">
+        T&T Mobile
+      </div>
+      <span>Quản lý sửa chữa điện thoại</span>
+    </div>
     <nav class="sidebar-nav">
       <div class="nav-item active" onclick="showPage('list')" id="nav-list">
         <i data-lucide="clipboard-list" style="width:16px;height:16px;flex-shrink:0"></i> Danh sách phiếu
@@ -2712,7 +2812,12 @@ function getChatSheet() {
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
               <div class="field">
                 <label>IMEI / Serial</label>
-                <input type="text" id="f-imei" style="padding:7px 10px">
+                <div style="position:relative">
+                  <input type="text" id="f-imei" style="padding:7px 30px 7px 10px; width:100%">
+                  <button type="button" class="btn-scan-imei mobile-only" onclick="startImeiScan()" title="Quét mã vạch" style="position:absolute; right:2px; top:50%; transform:translateY(-50%); background:none; border:none; padding:5px; color:var(--accent); cursor:pointer">
+                    <i data-lucide="scan-barcode" style="width:18px;height:18px"></i>
+                  </button>
+                </div>
               </div>
               <div class="field">
                 <label>Mật khẩu máy</label>
@@ -2811,17 +2916,29 @@ function getChatSheet() {
     <button class="img-viewer-close" onclick="closeViewer()"><i data-lucide="x" style="width:16px;height:16px"></i></button>
   </div>
   <div class="img-viewer-ui">
-    <button class="img-nav-btn" onclick="viewerNav(-1)"><i data-lucide="chevron-left" style="width:14px;height:14px"></i> Trước</button>
-    <span class="img-viewer-count" id="viewer-count">1 / 1</span>
-    <button class="img-nav-btn" onclick="viewerNav(1)">Sau <i data-lucide="chevron-right" style="width:14px;height:14px"></i></button>
-    <div style="width:1px;height:20px;background:rgba(255,255,255,0.15);margin:0 4px"></div>
-    <button class="img-zoom-btn" onclick="viewerZoom(-0.3)">−</button>
-    <button class="img-zoom-btn" onclick="viewerZoom(0.3)">+</button>
-    <button class="img-nav-btn" onclick="viewerResetZoom()" style="font-size:11px;padding:7px 10px">Reset</button>
-    <div style="width:1px;height:20px;background:rgba(255,255,255,0.15);margin:0 4px"></div>
-    <button class="img-nav-btn" onclick="viewerRotate(-90)" title="Xoay trái" style="padding:8px 12px"><i data-lucide="rotate-ccw" style="width:14px;height:14px"></i></button>
-    <button class="img-nav-btn" onclick="viewerRotate(90)" title="Xoay phải" style="padding:8px 12px"><i data-lucide="rotate-cw" style="width:14px;height:14px"></i></button>
-    <button class="img-nav-btn" onclick="viewerDownload()" title="Tải ảnh" style="padding:8px 12px"><i data-lucide="download" style="width:14px;height:14px"></i></button>
+    <div class="img-viewer-group img-nav-group">
+      <button class="img-nav-btn" onclick="viewerNav(-1)"><i data-lucide="chevron-left" style="width:14px;height:14px"></i> <span class="btn-text">Trước</span></button>
+      <span class="img-viewer-count" id="viewer-count">1 / 1</span>
+      <button class="img-nav-btn" onclick="viewerNav(1)"><span class="btn-text">Sau</span> <i data-lucide="chevron-right" style="width:14px;height:14px"></i></button>
+    </div>
+    
+    <div class="img-viewer-divider"></div>
+    
+    <div class="img-viewer-sub-row">
+      <div class="img-viewer-group img-zoom-group">
+        <button class="img-zoom-btn" onclick="viewerZoom(-0.3)">−</button>
+        <button class="img-zoom-btn" onclick="viewerZoom(0.3)">+</button>
+        <button class="img-nav-btn" onclick="viewerResetZoom()" style="font-size:11px;padding:7px 10px">Reset</button>
+      </div>
+      
+      <div class="img-viewer-divider"></div>
+      
+      <div class="img-viewer-group img-action-group">
+        <button class="img-nav-btn" onclick="viewerRotate(-90)" title="Xoay trái" style="padding:8px 12px"><i data-lucide="rotate-ccw" style="width:14px;height:14px"></i></button>
+        <button class="img-nav-btn" onclick="viewerRotate(90)" title="Xoay phải" style="padding:8px 12px"><i data-lucide="rotate-cw" style="width:14px;height:14px"></i></button>
+        <button class="img-nav-btn" onclick="viewerDownload()" title="Tải ảnh" style="padding:8px 12px"><i data-lucide="download" style="width:14px;height:14px"></i></button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -2848,6 +2965,35 @@ function getChatSheet() {
       <button class="btn btn-green" onclick="takeWebcamPhoto()" style="padding: 8px 16px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">
         <i data-lucide="aperture" style="width:16px;height:16px"></i>
         <span>Chụp ảnh</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Barcode Scanner Modal (mobile only) -->
+<div id="barcode-modal" class="modal-overlay" style="z-index: 2200; display: none;">
+  <div class="modal" style="width: 500px; max-width: 95vw; height: auto; max-height: 90vh;">
+    <div class="modal-header">
+      <div class="modal-title" style="display: flex; align-items: center; gap: 8px;">
+        <i data-lucide="scan-barcode" style="width:20px;height:20px;color:var(--accent)"></i>
+        <span>Quét mã vạch IMEI</span>
+      </div>
+      <button type="button" class="modal-close" onclick="closeBarcodeModal()"><i data-lucide="x" style="width:16px;height:16px"></i></button>
+    </div>
+    <div class="modal-body" style="padding: 0; background: #000; display: flex; align-items: center; justify-content: center; position: relative; aspect-ratio: 4/3; overflow: hidden; min-height: 280px; border-radius: 4px;">
+      <video id="barcode-video" autoplay playsinline muted style="width: 100%; height: 100%; object-fit: cover;"></video>
+      <!-- Scan region overlay -->
+      <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none;">
+        <div style="width:260px; height:160px; border:2px solid rgba(59,140,237,0.7); border-radius:12px; position:relative; box-shadow: 0 0 0 9999px rgba(0,0,0,0.4);">
+          <div id="barcode-scan-line" style="position:absolute; left:8px; right:8px; height:2px; background:linear-gradient(90deg, transparent, #ef4444, #ef4444, transparent); top:50%; box-shadow: 0 0 8px 2px rgba(239,68,68,0.5); animation: scan-line-anim 2s ease-in-out infinite;"></div>
+        </div>
+      </div>
+      <div id="barcode-status" style="position:absolute; bottom:12px; left:0; right:0; text-align:center; color:rgba(255,255,255,0.8); font-size:12px; font-weight:600; text-shadow: 0 1px 4px rgba(0,0,0,0.7);">Đưa mã vạch vào khung để quét...</div>
+    </div>
+    <div class="modal-footer" style="display: flex; justify-content: center; align-items: center; padding: 12px 16px;">
+      <button class="btn btn-secondary" onclick="closeBarcodeModal()" style="padding: 10px 24px; border-radius: 8px; display:inline-flex; align-items:center; gap:6px;">
+        <i data-lucide="x" style="width:14px;height:14px"></i>
+        <span>Đóng</span>
       </button>
     </div>
   </div>
@@ -6993,6 +7139,129 @@ async function sendPageChatMsg() {
     saveChatLocal();
     renderAllChatViews(false);
   }
+}
+/* ══════ BARCODE SCANNER FOR IMEI ══════ */
+let _barcodeReader = null;
+let _barcodeStream = null;
+
+function startImeiScan() {
+  const modal = document.getElementById('barcode-modal');
+  modal.classList.add('open');
+  modal.style.display = 'flex';
+  const statusEl = document.getElementById('barcode-status');
+  statusEl.textContent = 'Đang khởi động camera...';
+
+  const video = document.getElementById('barcode-video');
+
+  navigator.mediaDevices.getUserMedia({
+    video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+  }).then(stream => {
+    _barcodeStream = stream;
+    video.srcObject = stream;
+    video.play();
+    statusEl.textContent = 'Đưa mã vạch vào khung để quét...';
+
+    // Initialize ZXing reader
+    if (typeof ZXing !== 'undefined') {
+      const hints = new Map();
+      const formats = [
+        ZXing.BarcodeFormat.CODE_128,
+        ZXing.BarcodeFormat.CODE_39,
+        ZXing.BarcodeFormat.EAN_13,
+        ZXing.BarcodeFormat.EAN_8,
+        ZXing.BarcodeFormat.ITF,
+        ZXing.BarcodeFormat.QR_CODE,
+        ZXing.BarcodeFormat.DATA_MATRIX,
+        ZXing.BarcodeFormat.CODE_93
+      ];
+      hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formats);
+      hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+      _barcodeReader = new ZXing.BrowserMultiFormatReader(hints);
+
+      _barcodeReader.decodeFromVideoElement(video)
+        .then(result => {
+          handleBarcodeResult(result.getText());
+        })
+        .catch(() => {});
+
+      // Continuous decode loop
+      _startBarcodeScanLoop(video);
+    } else {
+      statusEl.textContent = 'Lỗi: Thư viện quét mã vạch chưa tải xong. Vui lòng thử lại.';
+    }
+  }).catch(err => {
+    console.error('Không mở được camera:', err);
+    toast('Không truy cập được camera. Vui lòng kiểm tra quyền camera.', 'error');
+    closeBarcodeModal();
+  });
+
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+let _barcodeScanInterval = null;
+function _startBarcodeScanLoop(video) {
+  if (_barcodeScanInterval) clearInterval(_barcodeScanInterval);
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+
+  _barcodeScanInterval = setInterval(() => {
+    if (!_barcodeReader || !video || video.readyState < 2) return;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    try {
+      const luminance = new ZXing.HTMLCanvasElementLuminanceSource(canvas);
+      const binarizer = new ZXing.HybridBinarizer(luminance);
+      const bitmap = new ZXing.BinaryBitmap(binarizer);
+      const hints = new Map();
+      hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+      const reader = new ZXing.MultiFormatReader();
+      reader.setHints(hints);
+      const result = reader.decode(bitmap);
+      if (result && result.getText()) {
+        handleBarcodeResult(result.getText());
+      }
+    } catch (e) {
+      // No barcode found in this frame, continue scanning
+    }
+  }, 300);
+}
+
+function handleBarcodeResult(text) {
+  if (!text) return;
+  // Fill the IMEI field
+  const imeiInput = document.getElementById('f-imei');
+  if (imeiInput) {
+    imeiInput.value = text.trim();
+    imeiInput.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  // Haptic feedback
+  if (navigator.vibrate) navigator.vibrate(100);
+
+  toast('Đã quét thành công: ' + text.trim(), 'success');
+  closeBarcodeModal();
+}
+
+function closeBarcodeModal() {
+  if (_barcodeScanInterval) {
+    clearInterval(_barcodeScanInterval);
+    _barcodeScanInterval = null;
+  }
+  if (_barcodeReader) {
+    try { _barcodeReader.reset(); } catch(e) {}
+    _barcodeReader = null;
+  }
+  if (_barcodeStream) {
+    _barcodeStream.getTracks().forEach(track => track.stop());
+    _barcodeStream = null;
+  }
+  const video = document.getElementById('barcode-video');
+  if (video) video.srcObject = null;
+  const modal = document.getElementById('barcode-modal');
+  modal.classList.remove('open');
+  modal.style.display = 'none';
 }
 </script>
 </body>
