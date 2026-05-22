@@ -3336,12 +3336,22 @@ async function autoSyncFromSheets() {
     };
     let imported = 0, updated = 0;
     
-    const delQ = getDeletedQueue();
-    // Bỏ qua các phiếu đang chờ xóa để tránh pull ngược lại
-    json.rows = json.rows.filter((r, i) => i === 0 || !delQ.includes(parseInt(r[0])));
+    const serverRows = json.rows.slice(1);
     
-    if (delQ.length > 0) {
-      setTimeout(() => { delQ.forEach(id => deleteFromSheets(id)); }, 3000);
+    // Xóa khỏi hàng đợi những ID đã không còn trên server hoặc đã bị soft-delete
+    delQ.forEach(id => {
+      const r = serverRows.find(x => parseInt(x[0]) === id);
+      if (!r || r[15] === '__DELETED__') {
+        removeDeletedQueue(id);
+      }
+    });
+
+    const currentDelQ = getDeletedQueue();
+    // Bỏ qua các phiếu đang chờ xóa và các phiếu đã soft-delete
+    json.rows = json.rows.filter((r, i) => i === 0 || (!currentDelQ.includes(parseInt(r[0])) && r[15] !== '__DELETED__'));
+    
+    if (currentDelQ.length > 0) {
+      setTimeout(() => { currentDelQ.forEach(id => deleteFromSheets(id)); }, 3000);
     }
 
     json.rows.slice(1).forEach(r => {
@@ -4551,6 +4561,7 @@ function deleteSelected() {
   if (!canEditTicket(selectedTicketId)) { toast('Bạn không có quyền xóa phiếu này!', 'error'); return; }
   if (!confirm(`Xóa phiếu #${selectedTicketId}?`)) return;
   const id = selectedTicketId;
+  const ticket = DB.tickets.find(t => t.id === id);
   DB.tickets = DB.tickets.filter(t => t.id !== id);
   selectedTicketId = null;
   document.getElementById('btn-edit').disabled = true;
@@ -4558,17 +4569,18 @@ function deleteSelected() {
   document.getElementById('btn-print').disabled = true;
   saveStorage(); renderTable(DB.tickets);
   toast('Đã xóa phiếu', 'success');
-  deleteFromSheets(id);
+  deleteFromSheets(id, ticket);
 }
 function deleteCurrentTicket() {
   if (!editingTicketId) return;
   if (!confirm(`Xóa phiếu #${editingTicketId}?`)) return;
   const id = editingTicketId;
+  const ticket = DB.tickets.find(t => t.id === id);
   DB.tickets = DB.tickets.filter(t => t.id !== id);
   saveStorage(); renderTable(DB.tickets);
   closeForm();
   toast('Đã xóa phiếu', 'success');
-  deleteFromSheets(id);
+  deleteFromSheets(id, ticket);
 }
 
 // ══════ PRINT ══════
@@ -5449,7 +5461,16 @@ async function pullFromSheets() {
     };
     
     const delQ = getDeletedQueue();
-    const filteredRows = rows.filter((r, i) => i === 0 || !delQ.includes(parseInt(r[0])));
+    
+    delQ.forEach(id => {
+      const r = rows.slice(1).find(x => parseInt(x[0]) === id);
+      if (!r || r[15] === '__DELETED__') {
+        removeDeletedQueue(id);
+      }
+    });
+
+    const currentDelQ = getDeletedQueue();
+    const filteredRows = rows.filter((r, i) => i === 0 || (!currentDelQ.includes(parseInt(r[0])) && r[15] !== '__DELETED__'));
 
     filteredRows.slice(1).forEach(r => {
       const id = parseInt(r[0]);
@@ -5512,9 +5533,29 @@ async function syncDrive() {
 async function syncToDrive(ticket) {
   // Đã xử lý trong saveTicket() rồi, hàm này giữ để tương thích
 }
-async function deleteFromSheets(id) {
+async function deleteFromSheets(id, ticketObj) {
   if (!SETTINGS.driveConnected || !SETTINGS.scriptUrl) return;
   addDeletedQueue(id);
+  
+  // SOFT DELETE FALLBACK
+  if (ticketObj) {
+    try {
+      const row = {
+        ...ticketObj,
+        status: '__DELETED__',
+        phone: normalizePhone(ticketObj.phone),
+        imei: normalizeTextField(ticketObj.imei),
+        password: normalizeTextField(ticketObj.password),
+        date_returned: normalizeDateForInput(ticketObj.date_returned)
+      };
+      IMG_SLOTS.forEach(s => {
+        row[s.attr + '_urls'] = [];
+        row[s.attr + '_raw'] = [];
+      });
+      await fetch(SETTINGS.scriptUrl, { method: 'POST', body: JSON.stringify({ action: 'upsert', row }) });
+    } catch(e) { console.warn('[Soft delete]', e); }
+  }
+
   try {
     const payload = { action: 'delete', id, requestUser: AUTH.currentUser?.username || '' };
     let ok = false;
