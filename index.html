@@ -4656,6 +4656,21 @@ async function saveTicket() {
   } else {
     savedTicket = { id: DB.nextId++, date_received: now, created_by: AUTH.currentUser?.username || '', ...ticketData, needs_sync: true };
     DB.tickets.unshift(savedTicket);
+    editingTicketId = savedTicket.id; // Chuyển form sang chế độ sửa phiếu
+    
+    // Cập nhật giao diện của form đang mở để chuyển sang chế độ sửa
+    const formTitle = document.getElementById('form-title');
+    if (formTitle) formTitle.textContent = 'Sửa phiếu #' + editingTicketId;
+    
+    const btnDelete = document.getElementById('btn-delete-ticket');
+    if (btnDelete) btnDelete.style.display = 'inline-flex';
+    
+    const btnPrint = document.getElementById('btn-print-form');
+    if (btnPrint) btnPrint.style.display = 'inline-flex';
+    
+    const saveText = document.getElementById('btn-save-text');
+    if (saveText) saveText.textContent = 'Cập nhật';
+    
     toast('Đã lưu phiếu #' + savedTicket.id + ' • Đang upload ảnh...', 'success');
   }
 
