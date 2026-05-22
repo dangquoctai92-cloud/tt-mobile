@@ -3386,8 +3386,6 @@ async function autoSyncFromSheets() {
       if (idx === -1) { DB.tickets.unshift(ticketFromSheet); if (id >= DB.nextId) DB.nextId = id + 1; imported++; }
       else { DB.tickets[idx] = { ...DB.tickets[idx], ...ticketFromSheet }; updated++; }
     });
-    
-    const currentDelQ = getDeletedQueue();
     // Tính serverIds từ serverRows gốc (chưa filter) để maxServerId không bị lùi lại khi xóa phiếu mới nhất
     const allServerIds = new Set(serverRows.map(r => parseInt(r[0])).filter(Boolean));
     const maxServerId = allServerIds.size > 0 ? Math.max(...Array.from(allServerIds)) : 0;
