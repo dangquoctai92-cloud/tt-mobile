@@ -3341,14 +3341,14 @@ async function autoSyncFromSheets() {
     // Xóa khỏi hàng đợi những ID đã không còn trên server hoặc đã bị soft-delete
     delQ.forEach(id => {
       const r = serverRows.find(x => parseInt(x[0]) === id);
-      if (!r || r[15] === '__DELETED__') {
+      if (!r || String(r[15] || '').trim() === '__DELETED__') {
         removeDeletedQueue(id);
       }
     });
 
     const currentDelQ = getDeletedQueue();
     // Bỏ qua các phiếu đang chờ xóa và các phiếu đã soft-delete
-    json.rows = json.rows.filter((r, i) => i === 0 || (!currentDelQ.includes(parseInt(r[0])) && r[15] !== '__DELETED__'));
+    json.rows = json.rows.filter((r, i) => i === 0 || (!currentDelQ.includes(parseInt(r[0])) && String(r[15] || '').trim() !== '__DELETED__'));
     
     if (currentDelQ.length > 0) {
       setTimeout(() => { currentDelQ.forEach(id => deleteFromSheets(id)); }, 3000);
@@ -3373,7 +3373,7 @@ async function autoSyncFromSheets() {
         parts_cost: parseInt(r[12])||0,
         labor_cost: parseInt(r[13])||0,
         total: parseInt(r[14])||0,
-        status: String(r[15] || 'Đang sửa'),
+        status: String(r[15] || 'Đang sửa').trim(),
         date_returned: normalizeDateForInput(r[16]),
         notes: String(r[17] || ''),
         before_images:    JSON.stringify(parseImgCol(r[18])),
@@ -4202,6 +4202,10 @@ function renderTable(tickets) {
   const tbody = document.getElementById('ticket-tbody');
   const me = AUTH.currentUser?.username || '';
   const role = AUTH.currentUser?.role || 'viewer';
+  
+  // Lọc bỏ triệt để các phiếu đã bị xóa mềm (phòng trường hợp cache cũ)
+  tickets = tickets.filter(t => t.status !== '__DELETED__');
+
   // Kỹ thuật viên chỉ thấy phiếu của mình
   if (role === 'manager') {
     tickets = tickets.filter(t => t.created_by === me);
@@ -5468,13 +5472,13 @@ async function pullFromSheets() {
     
     delQ.forEach(id => {
       const r = rows.slice(1).find(x => parseInt(x[0]) === id);
-      if (!r || r[15] === '__DELETED__') {
+      if (!r || String(r[15] || '').trim() === '__DELETED__') {
         removeDeletedQueue(id);
       }
     });
 
     const currentDelQ = getDeletedQueue();
-    const filteredRows = rows.filter((r, i) => i === 0 || (!currentDelQ.includes(parseInt(r[0])) && r[15] !== '__DELETED__'));
+    const filteredRows = rows.filter((r, i) => i === 0 || (!currentDelQ.includes(parseInt(r[0])) && String(r[15] || '').trim() !== '__DELETED__'));
 
     filteredRows.slice(1).forEach(r => {
       const id = parseInt(r[0]);
@@ -5484,7 +5488,7 @@ async function pullFromSheets() {
         brand: String(r[4] || ''), model: String(r[5] || ''), imei: normalizeTextField(r[6]), password: normalizeTextField(r[7]),
         problem: r[8], machine_condition: r[9], diagnosis: r[10], repair_method: r[11],
         parts_cost: parseInt(r[12])||0, labor_cost: parseInt(r[13])||0, total: parseInt(r[14])||0,
-        status: String(r[15] || 'Đang sửa'), date_returned: normalizeDateForInput(r[16]), notes: String(r[17] || ''),
+        status: String(r[15] || 'Đang sửa').trim(), date_returned: normalizeDateForInput(r[16]), notes: String(r[17] || ''),
         before_images:    JSON.stringify(parseImgCol(r[18])),
         after_images:     JSON.stringify(parseImgCol(r[19])),
         condition_images: JSON.stringify(parseImgCol(r[20])),
