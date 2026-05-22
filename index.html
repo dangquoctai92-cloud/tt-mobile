@@ -3348,11 +3348,20 @@ async function autoSyncFromSheets() {
       if (idx === -1) { DB.tickets.unshift(ticketFromSheet); if (id >= DB.nextId) DB.nextId = id + 1; imported++; }
       else { DB.tickets[idx] = { ...DB.tickets[idx], ...ticketFromSheet }; updated++; }
     });
+    
+    // Xóa local những phiếu đã bị xóa trên server (không có trong json.rows)
+    // Giữ lại những phiếu mới tạo offline (id > maxServerId)
+    const serverIds = new Set(json.rows.slice(1).map(r => parseInt(r[0])).filter(Boolean));
+    const maxServerId = serverIds.size > 0 ? Math.max(...Array.from(serverIds)) : 0;
+    const oldLen = DB.tickets.length;
+    DB.tickets = DB.tickets.filter(t => serverIds.has(t.id) || t.id > maxServerId);
+    const deletedLocally = oldLen - DB.tickets.length;
+
     DB.tickets.sort((a, b) => b.id - a.id);
     saveStorage();
     renderTable(DB.tickets);
-    if (imported > 0 || updated > 0) {
-      toast('☁ Đồng bộ: +' + imported + ' mới, ~' + updated + ' cập nhật', 'success');
+    if (imported > 0 || updated > 0 || deletedLocally > 0) {
+      toast('☁ Đồng bộ: +' + imported + ' mới, ~' + updated + ' cập nhật, -' + deletedLocally + ' đã xóa', 'success');
     }
     updateDriveStatus(true);
   } catch(e) {
@@ -5428,9 +5437,15 @@ async function pullFromSheets() {
       if (idx === -1) { DB.tickets.unshift(ticketFromSheet); if (id >= DB.nextId) DB.nextId = id + 1; imported++; }
       else { DB.tickets[idx] = { ...DB.tickets[idx], ...ticketFromSheet }; updated++; }
     });
+
+    const serverIds = new Set(rows.slice(1).map(r => parseInt(r[0])).filter(Boolean));
+    const maxServerId = serverIds.size > 0 ? Math.max(...Array.from(serverIds)) : 0;
+    const oldLen = DB.tickets.length;
+    DB.tickets = DB.tickets.filter(t => serverIds.has(t.id) || t.id > maxServerId);
+    const deletedLocally = oldLen - DB.tickets.length;
     saveStorage(); renderTable(DB.tickets);
-    setMsg(`✔ Xong! Mới: ${imported} phiếu | Cập nhật: ${updated} phiếu (kèm ảnh Drive)`, 'var(--green)');
-    toast(`Sync xong: +${imported} mới, ~${updated} cập nhật`, 'success');
+    setMsg(`✔ Xong! Mới: ${imported} | Cập nhật: ${updated} | Xóa local: ${deletedLocally}`, 'var(--green)');
+    toast(`Sync xong: +${imported} mới, ~${updated} cập nhật, -${deletedLocally} xóa`, 'success');
   } catch(e) {
     setMsg(`✘ Lỗi: ${e.message}`, 'var(--red)');
   }
