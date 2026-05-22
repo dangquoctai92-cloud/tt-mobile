@@ -39,6 +39,14 @@
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.spin-animation {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}
 body.pre-auth #login-screen,
 body.pre-auth #app { display: none !important; }
 
@@ -2042,7 +2050,7 @@ body.logged-in .chat-fab-wrap { display: block; }
 const SHEET_NAME = "Phiếu Sửa Chữa";
 const USER_SHEET_NAME = "Tài Khoản";
 const FOLDER_NAME = "SuaChuaPro_Images";
-const HEADERS = ["ID","Ngày nhận","Khách hàng","SĐT","Hãng","Model","IMEI","Mật khẩu","Lỗi báo","Tình trạng máy","Chẩn đoán","Phương pháp sửa","Tiền LK","Công thợ","Tổng tiền","Trạng thái","Ngày trả","Ghi chú","Ảnh trước","Ảnh sau","Ảnh tình trạng","Ảnh sửa chữa"];
+const HEADERS = ["ID","Ngày nhận","Khách hàng","SĐT","Hãng","Model","IMEI","Mật khẩu","Lỗi báo","Tình trạng máy","Chẩn đoán","Phương pháp sửa","Tiền LK","Công thợ","Tổng tiền","Trạng thái","Ngày trả","Ghi chú","Ảnh trước","Ảnh sau","Ảnh tình trạng","Ảnh sửa chữa","Người tạo"];
 const USER_HEADERS = ["username","password","displayName","role"];
 const HISTORY_SHEET_NAME = "TicketEditHistory";
 const HISTORY_HEADERS = ["ts","ticket_id","action","by","note"];
@@ -2178,7 +2186,8 @@ function doPost(e) {
         mergeUrls(r.before_images_urls,  beforeUrls),
         mergeUrls(r.after_images_urls,   afterUrls),
         mergeUrls(r.condition_images_urls,condUrls),
-        mergeUrls(r.repair_images_urls,  repairUrls)
+        mergeUrls(r.repair_images_urls,  repairUrls),
+        txt(r.created_by || r.updated_by || '')
       ];
 
       const ids = ws.getRange(2,1,Math.max(ws.getLastRow()-1,1),1).getValues().flat();
@@ -2406,7 +2415,12 @@ function doPost(e) {
     if (data.action === "getAll") {
       const ws = getSheet();
       const rows = ws.getDataRange().getValues();
-      return out({ok:true, rows});
+      const uws = getUserSheet();
+      const urows = uws.getDataRange().getValues();
+      const users = urows.slice(1).filter(r => r[0]).map(r => ({
+        username: r[0], password: r[1], displayName: r[2], role: r[3]
+      }));
+      return out({ok:true, rows, users});
     }
 
     if (data.action === "ping") return ok("pong");
@@ -3303,10 +3317,10 @@ function removeDeletedQueue(id) {
 
 
 async function autoSyncFromSheets() {
-  if (!SETTINGS.scriptUrl && !HARDCODED_SCRIPT_URL) return;
+  if (!SETTINGS.scriptUrl && !HARDCODED_SCRIPT_URL) return null;
   try {
     const json = await fetchSheetsSnapshot();
-    if (!json.ok) return;
+    if (!json.ok) return null;
 
     // Cập nhật users nếu server trả về
     if (json.users && json.users.length) {
@@ -3329,7 +3343,7 @@ async function autoSyncFromSheets() {
       }
     }
 
-    if (!json.rows || json.rows.length < 2) { saveStorage(); return; }
+    if (!json.rows || json.rows.length < 2) { saveStorage(); return { imported: 0, updated: 0, deleted: 0 }; }
     const parseImgCol = (val) => {
       const str = String(val || '');
       return str.split('|').filter(Boolean).map(url => ({ url: String(url).trim() }));
@@ -3337,6 +3351,7 @@ async function autoSyncFromSheets() {
     let imported = 0, updated = 0;
     
     const serverRows = json.rows.slice(1);
+    const delQ = getDeletedQueue();
     
     // Xóa khỏi hàng đợi những ID đã không còn trên server hoặc đã bị soft-delete
     delQ.forEach(id => {
@@ -3357,6 +3372,8 @@ async function autoSyncFromSheets() {
     json.rows.slice(1).forEach(r => {
       const id = parseInt(r[0]);
       if (!id) return;
+      const idx = DB.tickets.findIndex(t => t.id === id);
+      const existingTicket = idx !== -1 ? DB.tickets[idx] : null;
       const ticketFromSheet = {
         id,
         date_received: parseSheetDate(r[1]),
@@ -3380,9 +3397,8 @@ async function autoSyncFromSheets() {
         after_images:     JSON.stringify(parseImgCol(r[19])),
         condition_images: JSON.stringify(parseImgCol(r[20])),
         repair_images:    JSON.stringify(parseImgCol(r[21])),
-        created_by: String(r[22] || ''),
+        created_by: (r[22] !== undefined && String(r[22]).trim() !== '') ? String(r[22]).trim() : (existingTicket ? (existingTicket.created_by || '') : ''),
       };
-      const idx = DB.tickets.findIndex(t => t.id === id);
       if (idx === -1) { DB.tickets.unshift(ticketFromSheet); if (id >= DB.nextId) DB.nextId = id + 1; imported++; }
       else { DB.tickets[idx] = { ...DB.tickets[idx], ...ticketFromSheet }; updated++; }
     });
@@ -3406,11 +3422,128 @@ async function autoSyncFromSheets() {
       toast('☁ Đồng bộ: +' + imported + ' mới, ~' + updated + ' cập nhật, -' + deletedLocally + ' đã xóa', 'success');
     }
     updateDriveStatus(true);
+    return { imported, updated, deleted: deletedLocally };
   } catch(e) {
     console.warn('[Auto sync]', e);
     updateDriveStatus(true);
+    return null;
   }
 }
+
+// ══════ BACKGROUND SYNC LOOP (PERIODIC & VISIBILITY-AWARE) ══════
+let syncTimer = null;
+let lastSyncTime = 0;
+let lastUserActivity = Date.now();
+
+function recordUserActivity() {
+  lastUserActivity = Date.now();
+}
+['mousemove', 'keydown', 'click', 'touchstart', 'scroll'].forEach(evt => {
+  document.addEventListener(evt, recordUserActivity, { passive: true });
+});
+
+async function backgroundSyncLoop() {
+  if (!SETTINGS.scriptUrl) return { pushed: 0, imported: 0, updated: 0, deleted: 0 };
+  lastSyncTime = Date.now();
+  
+  let pushedCount = 0;
+  // Chỉ đẩy các phiếu đánh dấu needs_sync
+  const unpushed = DB.tickets.filter(t => t.needs_sync);
+  for (const t of unpushed) {
+    try {
+      const row = {
+        ...t,
+        phone: normalizePhone(t.phone),
+        imei: normalizeTextField(t.imei),
+        password: normalizeTextField(t.password),
+        date_returned: normalizeDateForInput(t.date_returned)
+      };
+      IMG_SLOTS.forEach(s => {
+        const imgs = t[s.attr] ? JSON.parse(t[s.attr]) : [];
+        row[s.attr + '_urls']  = imgs.filter(i => i.url).map(i => i.url);
+        row[s.attr + '_raw']   = imgs.filter(i => i.data);
+      });
+
+      let ok = false;
+      let json = null;
+      try {
+        const res = await fetch(SETTINGS.scriptUrl, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'upsert', row })
+        });
+        json = await res.json();
+        if (json && json.ok) ok = true;
+      } catch(e) {}
+      
+      if (!ok) {
+        const payload = { action: 'upsert', row };
+        const sep = SETTINGS.scriptUrl.includes('?') ? '&' : '?';
+        const res = await fetch(SETTINGS.scriptUrl + sep + 'action=upsert&data=' + encodeURIComponent(JSON.stringify(payload)), { method: 'GET', cache: 'no-store' });
+        json = await res.json();
+        if (json && json.ok) ok = true;
+      }
+      
+      if (ok && json) {
+        const idx = DB.tickets.findIndex(x => x.id === t.id);
+        if (idx !== -1) {
+          delete DB.tickets[idx].needs_sync;
+          if (json.imageUrls) {
+            IMG_SLOTS.forEach(s => {
+              const driveStr = json.imageUrls[s.attr] || '';
+              const driveUrls = driveStr.split('|').filter(Boolean);
+              if (driveUrls.length) {
+                DB.tickets[idx][s.attr] = JSON.stringify(driveUrls.map(url => ({ url })));
+              }
+            });
+          }
+          saveStorage();
+          clearLocalImages(t.id);
+          pushedCount++;
+        }
+      }
+    } catch(e) {
+      console.warn('[Background push failed]', t.id, e);
+    }
+  }
+
+  // Kéo dữ liệu mới nhất từ server về
+  const pullStats = await autoSyncFromSheets();
+  return {
+    pushed: pushedCount,
+    imported: pullStats ? pullStats.imported : 0,
+    updated: pullStats ? pullStats.updated : 0,
+    deleted: pullStats ? pullStats.deleted : 0
+  };
+}
+
+function startSyncTimer() {
+  if (syncTimer) clearInterval(syncTimer);
+  // Đồng bộ thông minh: kiểm tra mỗi 2 giây
+  syncTimer = setInterval(() => {
+    if (document.visibilityState !== 'visible') return;
+    
+    const now = Date.now();
+    const timeSinceLastActivity = now - lastUserActivity;
+    
+    // Đang hoạt động (trong 30s qua): đồng bộ mỗi 5 giây. Treo máy (idle): đồng bộ mỗi 20 giây.
+    const isUserActive = timeSinceLastActivity < 30000;
+    const currentInterval = isUserActive ? 5000 : 20000;
+    
+    if (now - lastSyncTime >= currentInterval) {
+      backgroundSyncLoop();
+    }
+  }, 2000);
+}
+
+// Đồng bộ lập tức khi người dùng quay lại tab (App) hoặc có kết nối mạng trở lại
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    backgroundSyncLoop();
+  }
+});
+window.addEventListener('online', () => {
+  backgroundSyncLoop();
+});
 
 function showLoginScreen() {
   const remRaw = localStorage.getItem('suachua_remember');
@@ -4206,6 +4339,19 @@ function renderTable(tickets) {
   // Lọc bỏ triệt để các phiếu đã bị xóa mềm (phòng trường hợp cache cũ)
   tickets = tickets.filter(t => t.status !== '__DELETED__');
 
+  // Áp dụng bộ lọc tìm kiếm hiện tại nếu có
+  const searchInput = document.getElementById('desktop-search-input') || document.getElementById('mobile-search-input');
+  const searchVal = searchInput ? searchInput.value.toLowerCase().trim() : '';
+  if (searchVal) {
+    tickets = tickets.filter(t =>
+      (t.customer_name || '').toLowerCase().includes(searchVal) ||
+      (t.phone || '').includes(searchVal) ||
+      (t.imei || '').includes(searchVal) ||
+      (t.model || '').toLowerCase().includes(searchVal) ||
+      (t.problem || '').toLowerCase().includes(searchVal)
+    );
+  }
+
   // Kỹ thuật viên chỉ thấy phiếu của mình
   if (role === 'manager') {
     tickets = tickets.filter(t => t.created_by === me);
@@ -4277,16 +4423,13 @@ function selectRow(id) {
   }
 }
 function filterTable(q) {
-  const lq = q.toLowerCase().trim();
-  if (!lq) { renderTable(DB.tickets); return; }
-  const filtered = DB.tickets.filter(t =>
-    (t.customer_name || '').toLowerCase().includes(lq) ||
-    (t.phone || '').includes(lq) ||
-    (t.imei || '').includes(lq) ||
-    (t.model || '').toLowerCase().includes(lq) ||
-    (t.problem || '').toLowerCase().includes(lq)
-  );
-  renderTable(filtered);
+  // Đồng bộ giá trị tìm kiếm giữa Mobile và Desktop search input
+  const mob = document.getElementById('mobile-search-input');
+  const desk = document.getElementById('desktop-search-input');
+  if (mob && mob.value !== q) mob.value = q;
+  if (desk && desk.value !== q) desk.value = q;
+
+  renderTable(DB.tickets);
 }
 
 // ══════ FORM ══════
@@ -4506,12 +4649,12 @@ async function saveTicket() {
   if (editingTicketId) {
     const idx = DB.tickets.findIndex(t => t.id === editingTicketId);
     if (idx !== -1) {
-      DB.tickets[idx] = { ...DB.tickets[idx], ...ticketData };
+      DB.tickets[idx] = { ...DB.tickets[idx], ...ticketData, needs_sync: true };
       savedTicket = DB.tickets[idx];
       toast('Đã cập nhật phiếu #' + editingTicketId, 'success');
     }
   } else {
-    savedTicket = { id: DB.nextId++, date_received: now, created_by: AUTH.currentUser?.username || '', ...ticketData };
+    savedTicket = { id: DB.nextId++, date_received: now, created_by: AUTH.currentUser?.username || '', ...ticketData, needs_sync: true };
     DB.tickets.unshift(savedTicket);
     toast('Đã lưu phiếu #' + savedTicket.id + ' • Đang upload ảnh...', 'success');
   }
@@ -4520,27 +4663,44 @@ async function saveTicket() {
   renderTable(DB.tickets);
   // Không tự đóng form — người dùng tự đóng khi cần
 
-  // Upload ảnh lên Drive nền (async)
+  // Upload ảnh lên Drive nền (async) và Sync lên Sheets
   if (SETTINGS.driveConnected && SETTINGS.scriptUrl) {
     const hasNewImgs = IMG_SLOTS.some(s => (imgStore[s.attr] || []).some(i => i.data));
     if (hasNewImgs) {
       toast('Đang upload ảnh lên Google Drive...', 'info');
     }
     try {
-      const res = await fetch(SETTINGS.scriptUrl, {
-        method: 'POST',
-        body: JSON.stringify({ action: 'upsert', row: savedTicket })
-      });
-      const json = await res.json();
-      if (json.ok && json.imageUrls) {
+      let ok = false;
+      let json = null;
+      try {
+        const res = await fetch(SETTINGS.scriptUrl, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'upsert', row: savedTicket })
+        });
+        json = await res.json();
+        if (json && json.ok) ok = true;
+      } catch(e) {}
+
+      if (!ok) {
+        const payload = { action: 'upsert', row: savedTicket };
+        const sep = SETTINGS.scriptUrl.includes('?') ? '&' : '?';
+        const res = await fetch(SETTINGS.scriptUrl + sep + 'action=upsert&data=' + encodeURIComponent(JSON.stringify(payload)), { method: 'GET', cache: 'no-store' });
+        json = await res.json();
+        if (json && json.ok) ok = true;
+      }
+
+      if (ok && json) {
         // Cập nhật lại URL ảnh Drive vào local
         const idx = DB.tickets.findIndex(t => t.id === savedTicket.id);
         if (idx !== -1) {
-          IMG_SLOTS.forEach(s => {
-            const driveStr = json.imageUrls[s.attr] || '';
-            const driveUrls = driveStr.split('|').filter(Boolean);
-            DB.tickets[idx][s.attr] = JSON.stringify(driveUrls.map(url => ({ url })));
-          });
+          delete DB.tickets[idx].needs_sync; // Thành công thì xóa cờ needs_sync
+          if (json.imageUrls) {
+            IMG_SLOTS.forEach(s => {
+              const driveStr = json.imageUrls[s.attr] || '';
+              const driveUrls = driveStr.split('|').filter(Boolean);
+              DB.tickets[idx][s.attr] = JSON.stringify(driveUrls.map(url => ({ url })));
+            });
+          }
           saveStorage();
           // Xóa base64 local vì đã có URL Drive → tránh tốn quota
           clearLocalImages(savedTicket.id);
@@ -4549,7 +4709,7 @@ async function saveTicket() {
         else toast('Phiếu đã đồng bộ lên Sheets', 'success');
       }
     } catch(e) {
-      toast('Lưu local OK, nhưng sync Drive thất bại', 'info');
+      toast('Lưu local OK, nhưng sync Drive thất bại (sẽ được tự động đồng bộ lại sau)', 'info');
       console.warn('[Drive sync]', e);
     }
   }
@@ -5375,7 +5535,7 @@ async function callScriptAny(payload) {
 
 async function fetchSheetsSnapshot() {
   // Ưu tiên POST vì nhiều trình duyệt/ẩn danh chặn GET CORS với Apps Script
-  const postActions = ['list', 'getTickets', 'pull', 'getAll'];
+  const postActions = ['getAll', 'list', 'getTickets', 'pull'];
   let lastErr = null;
   for (const action of postActions) {
     try {
@@ -5388,9 +5548,9 @@ async function fetchSheetsSnapshot() {
   }
 
   const candidates = [
+    buildScriptUrl(''),
     buildScriptUrl('getTickets'),
-    buildScriptUrl('list'),
-    buildScriptUrl('')
+    buildScriptUrl('list')
   ].filter(Boolean);
 
   for (const url of candidates) {
@@ -5483,6 +5643,8 @@ async function pullFromSheets() {
     filteredRows.slice(1).forEach(r => {
       const id = parseInt(r[0]);
       if (!id) return;
+      const idx = DB.tickets.findIndex(t => t.id === id);
+      const existingTicket = idx !== -1 ? DB.tickets[idx] : null;
       const ticketFromSheet = {
         id, date_received: parseSheetDate(r[1]), customer_name: String(r[2] || ''), phone: normalizePhone(r[3]),
         brand: String(r[4] || ''), model: String(r[5] || ''), imei: normalizeTextField(r[6]), password: normalizeTextField(r[7]),
@@ -5493,8 +5655,8 @@ async function pullFromSheets() {
         after_images:     JSON.stringify(parseImgCol(r[19])),
         condition_images: JSON.stringify(parseImgCol(r[20])),
         repair_images:    JSON.stringify(parseImgCol(r[21])),
+        created_by: (r[22] !== undefined && String(r[22]).trim() !== '') ? String(r[22]).trim() : (existingTicket ? (existingTicket.created_by || '') : ''),
       };
-      const idx = DB.tickets.findIndex(t => t.id === id);
       if (idx === -1) { DB.tickets.unshift(ticketFromSheet); if (id >= DB.nextId) DB.nextId = id + 1; imported++; }
       else { DB.tickets[idx] = { ...DB.tickets[idx], ...ticketFromSheet }; updated++; }
     });
@@ -5538,8 +5700,34 @@ async function syncDrive() {
     toast('Đang có phiên đồng bộ chạy, vui lòng chờ xong.', 'info');
     return;
   }
-  toast('Đang đồng bộ toàn bộ lên Google Sheets...', 'info');
-  await pushAllToSheets();
+  
+  // Tạo hiệu ứng xoay icon khi người dùng bấm
+  const syncBtnIcon = document.querySelector('button[onclick="syncDrive()"] i');
+  if (syncBtnIcon) syncBtnIcon.classList.add('spin-animation');
+
+  toast('Đang đồng bộ dữ liệu toàn hệ thống...', 'info');
+  isSyncingDrive = true;
+  try {
+    const stats = await backgroundSyncLoop();
+    if (syncBtnIcon) syncBtnIcon.classList.remove('spin-animation');
+    
+    if (stats.pushed === 0 && stats.imported === 0 && stats.updated === 0 && stats.deleted === 0) {
+      toast('Dữ liệu đã mới nhất!', 'success');
+    } else {
+      let details = [];
+      if (stats.pushed > 0) details.push(`đẩy ${stats.pushed} phiếu lên`);
+      if (stats.imported > 0) details.push(`tải ${stats.imported} phiếu mới`);
+      if (stats.updated > 0) details.push(`cập nhật ${stats.updated} phiếu`);
+      if (stats.deleted > 0) details.push(`xóa ${stats.deleted} phiếu`);
+      toast('Đồng bộ xong: ' + details.join(', '), 'success');
+    }
+  } catch(e) {
+    if (syncBtnIcon) syncBtnIcon.classList.remove('spin-animation');
+    toast('Đồng bộ thất bại, vui lòng thử lại', 'error');
+    console.warn('[syncDrive failed]', e);
+  } finally {
+    isSyncingDrive = false;
+  }
 }
 async function syncToDrive(ticket) {
   // Đã xử lý trong saveTicket() rồi, hàm này giữ để tương thích
@@ -5594,7 +5782,6 @@ async function pushAllToSheets() {
   const failedIds = [];
   for (const t of DB.tickets) {
     try {
-      // Parse ảnh để lấy URLs và raw base64
       const row = {
         ...t,
         phone: normalizePhone(t.phone),
@@ -5605,22 +5792,41 @@ async function pushAllToSheets() {
       IMG_SLOTS.forEach(s => {
         const imgs = t[s.attr] ? JSON.parse(t[s.attr]) : [];
         row[s.attr + '_urls']  = imgs.filter(i => i.url).map(i => i.url);
-        row[s.attr + '_raw']   = imgs.filter(i => i.data); // base64 nếu còn
+        row[s.attr + '_raw']   = imgs.filter(i => i.data);
       });
-      const res = await fetch(SETTINGS.scriptUrl, { method: 'POST', body: JSON.stringify({ action: 'upsert', row }) });
-      const json = await res.json();
-      if (json.ok && json.imageUrls) {
-        // Cập nhật lại URL Drive
+      
+      let ok = false;
+      let json = null;
+      try {
+        const res = await fetch(SETTINGS.scriptUrl, { method: 'POST', body: JSON.stringify({ action: 'upsert', row }) });
+        json = await res.json();
+        if (json && json.ok) ok = true;
+      } catch(e) {}
+      
+      if (!ok) {
+        const payload = { action: 'upsert', row };
+        const sep = SETTINGS.scriptUrl.includes('?') ? '&' : '?';
+        const res = await fetch(SETTINGS.scriptUrl + sep + 'action=upsert&data=' + encodeURIComponent(JSON.stringify(payload)), { method: 'GET', cache: 'no-store' });
+        json = await res.json();
+        if (json && json.ok) ok = true;
+      }
+      
+      if (ok && json) {
         const idx = DB.tickets.findIndex(x => x.id === t.id);
         if (idx !== -1) {
-          IMG_SLOTS.forEach(s => {
-            const driveStr = json.imageUrls[s.attr] || '';
-            const driveUrls = driveStr.split('|').filter(Boolean);
-            if (driveUrls.length) DB.tickets[idx][s.attr] = JSON.stringify(driveUrls.map(url => ({ url })));
-          });
+          delete DB.tickets[idx].needs_sync;
+          if (json.imageUrls) {
+            IMG_SLOTS.forEach(s => {
+              const driveStr = json.imageUrls[s.attr] || '';
+              const driveUrls = driveStr.split('|').filter(Boolean);
+              if (driveUrls.length) DB.tickets[idx][s.attr] = JSON.stringify(driveUrls.map(url => ({ url })));
+            });
+          }
         }
+        done++;
+      } else {
+        failedIds.push(t.id);
       }
-      done++;
     } catch(e) {
       failedIds.push(t.id);
       console.warn('[pushAllToSheets]', t.id, e);
@@ -5711,8 +5917,9 @@ function initApp() {
     updateMyAvatarPreview();
   }
   applyRolePermissions();
-  // Sync ngay lap tuc tu Sheets (khong delay — dam bao thiet bi moi/an danh co du lieu)
-  autoSyncFromSheets();
+  // Sync ngay lập tức và bắt đầu vòng lặp đồng bộ nền tự động
+  backgroundSyncLoop();
+  startSyncTimer();
   // Retry upload ảnh còn chờ (base64 chưa lên Drive từ lần trước)
   setTimeout(retryPendingImageUploads, 3000);
   // Bat dau chat poll va load lich su chat tu server
