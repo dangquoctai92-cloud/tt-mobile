@@ -3387,12 +3387,18 @@ async function autoSyncFromSheets() {
       else { DB.tickets[idx] = { ...DB.tickets[idx], ...ticketFromSheet }; updated++; }
     });
     
-    // Xóa local những phiếu đã bị xóa trên server (không có trong json.rows)
-    // Giữ lại những phiếu mới tạo offline (id > maxServerId)
-    const serverIds = new Set(json.rows.slice(1).map(r => parseInt(r[0])).filter(Boolean));
-    const maxServerId = serverIds.size > 0 ? Math.max(...Array.from(serverIds)) : 0;
+    const currentDelQ = getDeletedQueue();
+    // Tính serverIds từ serverRows gốc (chưa filter) để maxServerId không bị lùi lại khi xóa phiếu mới nhất
+    const allServerIds = new Set(serverRows.map(r => parseInt(r[0])).filter(Boolean));
+    const maxServerId = allServerIds.size > 0 ? Math.max(...Array.from(allServerIds)) : 0;
+
+    // Tính serverIds cho các phiếu hợp lệ (không bị soft-delete và không nằm trong delQ)
+    const validServerIds = new Set(json.rows.slice(1).map(r => parseInt(r[0])).filter(Boolean));
+    
     const oldLen = DB.tickets.length;
-    DB.tickets = DB.tickets.filter(t => serverIds.has(t.id) || t.id > maxServerId);
+    // Xóa những phiếu không còn trên server hoặc đã bị filter out, NHƯNG giữ lại phiếu mới tạo ở local chưa push (t.id > maxServerId)
+    // Cần phải chắc chắn phiếu đó không nằm trong delQ thì mới giữ lại (phòng hờ)
+    DB.tickets = DB.tickets.filter(t => validServerIds.has(t.id) || (t.id > maxServerId && !currentDelQ.includes(t.id)));
     const deletedLocally = oldLen - DB.tickets.length;
 
     DB.tickets.sort((a, b) => b.id - a.id);
@@ -5491,10 +5497,13 @@ async function pullFromSheets() {
       else { DB.tickets[idx] = { ...DB.tickets[idx], ...ticketFromSheet }; updated++; }
     });
 
-    const serverIds = new Set(rows.slice(1).map(r => parseInt(r[0])).filter(Boolean));
-    const maxServerId = serverIds.size > 0 ? Math.max(...Array.from(serverIds)) : 0;
+    const allServerIds = new Set(rows.slice(1).map(r => parseInt(r[0])).filter(Boolean));
+    const maxServerId = allServerIds.size > 0 ? Math.max(...Array.from(allServerIds)) : 0;
+
+    const validServerIds = new Set(filteredRows.slice(1).map(r => parseInt(r[0])).filter(Boolean));
+    
     const oldLen = DB.tickets.length;
-    DB.tickets = DB.tickets.filter(t => serverIds.has(t.id) || t.id > maxServerId);
+    DB.tickets = DB.tickets.filter(t => validServerIds.has(t.id) || (t.id > maxServerId && !currentDelQ.includes(t.id)));
     const deletedLocally = oldLen - DB.tickets.length;
     saveStorage(); renderTable(DB.tickets);
     setMsg(`✔ Xong! Mới: ${imported} | Cập nhật: ${updated} | Xóa local: ${deletedLocally}`, 'var(--green)');
@@ -5552,27 +5561,28 @@ async function deleteFromSheets(id, ticketObj) {
         row[s.attr + '_urls'] = [];
         row[s.attr + '_raw'] = [];
       });
-      await fetch(SETTINGS.scriptUrl, { method: 'POST', body: JSON.stringify({ action: 'upsert', row }) });
+      let ok = false;
+      try {
+        const res = await fetch(SETTINGS.scriptUrl, { method: 'POST', body: JSON.stringify({ action: 'upsert', row }) });
+        const json = await res.json();
+        if (json && json.ok) ok = true;
+      } catch(e) {}
+      if (!ok) {
+        const payload = { action: 'upsert', row };
+        const sep = SETTINGS.scriptUrl.includes('?') ? '&' : '?';
+        await fetch(SETTINGS.scriptUrl + sep + 'action=upsert&data=' + encodeURIComponent(JSON.stringify(payload)), { method: 'GET', cache: 'no-store' });
+      }
     } catch(e) { console.warn('[Soft delete]', e); }
   }
 
   try {
     const payload = { action: 'delete', id, requestUser: AUTH.currentUser?.username || '' };
-    let ok = false;
     try {
-      const res = await fetch(SETTINGS.scriptUrl, { method: 'POST', body: JSON.stringify(payload) });
-      const json = await res.json();
-      if (json && json.ok) ok = true;
+      await fetch(SETTINGS.scriptUrl, { method: 'POST', body: JSON.stringify(payload) });
     } catch(e) {}
     
-    if (!ok) {
-      const sep = SETTINGS.scriptUrl.includes('?') ? '&' : '?';
-      const res = await fetch(SETTINGS.scriptUrl + sep + 'action=delete&data=' + encodeURIComponent(JSON.stringify(payload)), { method: 'GET', cache: 'no-store' });
-      const json = await res.json();
-      if (json && json.ok) ok = true;
-    }
-    
-    if (ok) removeDeletedQueue(id);
+    const sep = SETTINGS.scriptUrl.includes('?') ? '&' : '?';
+    await fetch(SETTINGS.scriptUrl + sep + 'action=delete&data=' + encodeURIComponent(JSON.stringify(payload)), { method: 'GET', cache: 'no-store' });
   } catch(e) { console.warn('[Sheets delete]', e); }
 }
 async function pushAllToSheets() {
