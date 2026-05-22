@@ -3283,6 +3283,25 @@ function normalizePhone(val) {
   return s;
 }
 
+// ══════ DELETED QUEUE ══════
+function getDeletedQueue() {
+  try { return JSON.parse(localStorage.getItem('suachua_deleted_queue')) || []; }
+  catch(e) { return []; }
+}
+function addDeletedQueue(id) {
+  const q = getDeletedQueue();
+  if (!q.includes(id)) {
+    q.push(id);
+    localStorage.setItem('suachua_deleted_queue', JSON.stringify(q));
+  }
+}
+function removeDeletedQueue(id) {
+  let q = getDeletedQueue();
+  q = q.filter(x => x !== id);
+  localStorage.setItem('suachua_deleted_queue', JSON.stringify(q));
+}
+
+
 async function autoSyncFromSheets() {
   if (!SETTINGS.scriptUrl && !HARDCODED_SCRIPT_URL) return;
   try {
@@ -3316,6 +3335,15 @@ async function autoSyncFromSheets() {
       return str.split('|').filter(Boolean).map(url => ({ url: String(url).trim() }));
     };
     let imported = 0, updated = 0;
+    
+    const delQ = getDeletedQueue();
+    // Bỏ qua các phiếu đang chờ xóa để tránh pull ngược lại
+    json.rows = json.rows.filter((r, i) => i === 0 || !delQ.includes(parseInt(r[0])));
+    
+    if (delQ.length > 0) {
+      setTimeout(() => { delQ.forEach(id => deleteFromSheets(id)); }, 3000);
+    }
+
     json.rows.slice(1).forEach(r => {
       const id = parseInt(r[0]);
       if (!id) return;
@@ -5419,7 +5447,11 @@ async function pullFromSheets() {
       const str = val || '';
       return str.split('|').filter(Boolean).map(url => ({ url: String(url).trim() }));
     };
-    rows.slice(1).forEach(r => {
+    
+    const delQ = getDeletedQueue();
+    const filteredRows = rows.filter((r, i) => i === 0 || !delQ.includes(parseInt(r[0])));
+
+    filteredRows.slice(1).forEach(r => {
       const id = parseInt(r[0]);
       if (!id) return;
       const ticketFromSheet = {
@@ -5482,8 +5514,24 @@ async function syncToDrive(ticket) {
 }
 async function deleteFromSheets(id) {
   if (!SETTINGS.driveConnected || !SETTINGS.scriptUrl) return;
+  addDeletedQueue(id);
   try {
-    await fetch(SETTINGS.scriptUrl, { method: 'POST', body: JSON.stringify({ action: 'delete', id, requestUser: AUTH.currentUser?.username || '' }) });
+    const payload = { action: 'delete', id, requestUser: AUTH.currentUser?.username || '' };
+    let ok = false;
+    try {
+      const res = await fetch(SETTINGS.scriptUrl, { method: 'POST', body: JSON.stringify(payload) });
+      const json = await res.json();
+      if (json && json.ok) ok = true;
+    } catch(e) {}
+    
+    if (!ok) {
+      const sep = SETTINGS.scriptUrl.includes('?') ? '&' : '?';
+      const res = await fetch(SETTINGS.scriptUrl + sep + 'action=delete&data=' + encodeURIComponent(JSON.stringify(payload)), { method: 'GET', cache: 'no-store' });
+      const json = await res.json();
+      if (json && json.ok) ok = true;
+    }
+    
+    if (ok) removeDeletedQueue(id);
   } catch(e) { console.warn('[Sheets delete]', e); }
 }
 async function pushAllToSheets() {
