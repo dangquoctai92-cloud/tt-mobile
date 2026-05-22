@@ -1,16 +1,24 @@
 {
-  "name": "T&T Mobile – Quản Lý Sửa Chữa",
+  "name": "T&T Mobile - Quản Lý Sửa Chữa",
   "short_name": "T&T Mobile",
-  "description": "Hệ thống quản lý sửa chữa điện thoại",
-  "start_url": "index.html",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#0f0f11",
   "theme_color": "#0f0f11",
+  "description": "Hệ thống quản lý sửa chữa điện thoại T&T Mobile",
   "icons": [
     {
-      "src": "logo.png",
+      "src": "./logo-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./logo-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
