@@ -1893,8 +1893,8 @@ body.logged-in .chat-fab-wrap { display: block; }
       <!-- Ô tìm kiếm riêng cho mobile -->
       <div class="mobile-search">
         <span style="color:var(--text3)">🔍</span>
-        <input type="text" id="mobile-search-input" placeholder="Tìm tên KH, SĐT, IMEI..." oninput="filterTable(this.value)" style="padding-right: 35px;">
-        <button type="button" class="btn-scan-imei mobile-only" onclick="startBarcodeScan('mobile-search-input')" title="Quét mã vạch" style="position:absolute; right:15px; top:50%; transform:translateY(-50%); background:none; border:none; padding:5px; color:var(--accent); cursor:pointer">
+        <input type="text" id="mobile-search-input" placeholder="Tìm tên KH, SĐT, IMEI..." oninput="filterTable(this.value)">
+        <button type="button" class="btn-scan-imei mobile-only" onclick="startBarcodeScan('mobile-search-input')" title="Quét mã vạch" style="background:none; border:none; padding:0 5px; margin:0; color:var(--accent); cursor:pointer; display:flex; align-items:center;">
           <i data-lucide="scan-barcode" style="width:18px;height:18px"></i>
         </button>
       </div>
@@ -1906,10 +1906,10 @@ body.logged-in .chat-fab-wrap { display: block; }
         <button class="btn btn-red" id="btn-del" disabled onclick="deleteSelected()"><i data-lucide="trash-2" style="width:13px;height:13px"></i> Xóa</button>
         <button class="btn btn-yellow" id="btn-print" disabled onclick="printTicket()"><i data-lucide="printer" style="width:13px;height:13px"></i> In phiếu</button>
         <div class="toolbar-spacer"></div>
-        <div class="search-wrap" style="position:relative">
+        <div class="search-wrap">
           <span style="color:var(--text3)">🔍</span>
-          <input type="text" id="desktop-search-input" placeholder="Tìm tên KH, SĐT, IMEI..." oninput="filterTable(this.value)" style="padding-right: 35px;">
-          <button type="button" class="btn-scan-imei mobile-only" onclick="startBarcodeScan('desktop-search-input')" title="Quét mã vạch" style="position:absolute; right:5px; top:50%; transform:translateY(-50%); background:none; border:none; padding:5px; color:var(--accent); cursor:pointer">
+          <input type="text" id="desktop-search-input" placeholder="Tìm tên KH, SĐT, IMEI..." oninput="filterTable(this.value)">
+          <button type="button" class="btn-scan-imei mobile-only" onclick="startBarcodeScan('desktop-search-input')" title="Quét mã vạch" style="background:none; border:none; padding:0 5px; margin:0; color:var(--accent); cursor:pointer; display:flex; align-items:center;">
             <i data-lucide="scan-barcode" style="width:18px;height:18px"></i>
           </button>
         </div>
@@ -7272,6 +7272,15 @@ function closeBarcodeModal() {
   const modal = document.getElementById('barcode-modal');
   modal.classList.remove('open');
   modal.style.display = 'none';
+}
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').then(reg => {
+      console.log('SW registered!', reg);
+    }).catch(err => {
+      console.log('SW registration failed: ', err);
+    });
+  });
 }
 </script>
 </body>
