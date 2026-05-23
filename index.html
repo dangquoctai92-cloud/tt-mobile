@@ -2958,6 +2958,7 @@ function getChatSheet() {
         <button class="img-nav-btn" onclick="viewerRotate(-90)" title="Xoay trái" style="padding:8px 12px"><i data-lucide="rotate-ccw" style="width:14px;height:14px"></i></button>
         <button class="img-nav-btn" onclick="viewerRotate(90)" title="Xoay phải" style="padding:8px 12px"><i data-lucide="rotate-cw" style="width:14px;height:14px"></i></button>
         <button class="img-nav-btn" onclick="viewerDownload()" title="Tải ảnh" style="padding:8px 12px"><i data-lucide="download" style="width:14px;height:14px"></i></button>
+        <button class="img-nav-btn" id="viewer-del-btn" onclick="viewerDelete()" title="Xóa ảnh" style="padding:8px 12px; color: #f87171;"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button>
       </div>
     </div>
   </div>
@@ -3106,7 +3107,7 @@ let selectedTicketId = null;
 let editingTicketId = null;
 let imgStore = { before_images: [], after_images: [], condition_images: [], repair_images: [] };
 // imgStore[attr] = array of { name, data (base64 mới) } HOẶC { url (đã có trên Drive) }
-let viewerImages = [], viewerIdx = 0, viewerScale = 1, viewerOffX = 0, viewerOffY = 0, viewerRotation = 0;
+let viewerImages = [], viewerIdx = 0, viewerScale = 1, viewerOffX = 0, viewerOffY = 0, viewerRotation = 0, viewerAttr = '';
 // Tránh bug mobile: nén ảnh (async) chưa xong đã bấm "Lưu phiếu"
 let imgProcessingActive = 0;
 let imgProcessingWaiters = [];
@@ -4178,12 +4179,18 @@ function refreshPreview(attr) {
 }
 function openViewer(attr) {
   const imgs = imgStore[attr];
-  if (!imgs.length) return;
+  if (!imgs || !imgs.length) return;
+  viewerAttr = attr;
   viewerImages = imgs;
   viewerIdx = 0;
   viewerScale = 1;
   viewerOffX = 0; viewerOffY = 0;
   viewerRotation = 0;
+
+  const readonly = document.querySelector('#form-modal .modal-body')?.classList.contains('form-readonly');
+  const delBtn = document.getElementById('viewer-del-btn');
+  if (delBtn) delBtn.style.display = readonly ? 'none' : 'inline-flex';
+
   renderViewer();
   document.getElementById('img-viewer').classList.add('open');
   initViewerDrag();
@@ -4249,6 +4256,19 @@ function viewerDownload() {
     a.download = `anh_${viewerIdx + 1}.jpg`;
     a.click();
     toast('Đang tải qua proxy...', 'info');
+  }
+}
+function viewerDelete() {
+  if (!confirm('Bạn có chắc chắn muốn xóa ảnh này?')) return;
+  viewerImages.splice(viewerIdx, 1);
+  imgStore[viewerAttr] = viewerImages;
+  refreshPreview(viewerAttr);
+  
+  if (viewerImages.length === 0) {
+    closeViewer();
+  } else {
+    if (viewerIdx >= viewerImages.length) viewerIdx = viewerImages.length - 1;
+    viewerResetZoom();
   }
 }
 function closeViewer() {
@@ -4618,12 +4638,16 @@ async function saveTicket() {
   try {
   const customer = document.getElementById('f-customer').value.trim();
   if (!customer) { toast('Vui lòng nhập tên khách hàng!', 'error'); return; }
+  
+  showCyberProgress(true, 10, 'ĐANG XỬ LÝ ẢNH...');
   await waitForImageProcessingDone();
+  
   const total = parseInt(document.getElementById('f-total').value) || 0;
   const parts_cost = parseInt(document.getElementById('f-parts').value) || 0;
   const now = new Date().toLocaleDateString('vi-VN');
 
   // Đóng form ngay, lưu local trước
+  showCyberProgress(true, 20, 'ĐANG LƯU DỮ LIỆU...');
   const ticketData = {
     customer_name: customer, phone: normalizePhone(document.getElementById('f-phone').value),
     brand: document.getElementById('f-brand').value, model: document.getElementById('f-model').value,
@@ -4647,11 +4671,10 @@ async function saveTicket() {
 
   let savedTicket;
   if (editingTicketId) {
-    const idx = DB.tickets.findIndex(t => t.id === editingTicketId);
+    const idx = DB.tickets.findIndex(t => String(t.id) === String(editingTicketId));
     if (idx !== -1) {
       DB.tickets[idx] = { ...DB.tickets[idx], ...ticketData, needs_sync: true };
       savedTicket = DB.tickets[idx];
-      toast('Đã cập nhật phiếu #' + editingTicketId, 'success');
     }
   } else {
     savedTicket = { id: DB.nextId++, date_received: now, created_by: AUTH.currentUser?.username || '', ...ticketData, needs_sync: true };
@@ -4670,8 +4693,6 @@ async function saveTicket() {
     
     const saveText = document.getElementById('btn-save-text');
     if (saveText) saveText.textContent = 'Cập nhật';
-    
-    toast('Đã lưu phiếu #' + savedTicket.id + ' • Đang upload ảnh...', 'success');
   }
 
   saveStorage();
@@ -4681,9 +4702,7 @@ async function saveTicket() {
   // Upload ảnh lên Drive nền (async) và Sync lên Sheets
   if (SETTINGS.driveConnected && SETTINGS.scriptUrl) {
     const hasNewImgs = IMG_SLOTS.some(s => (imgStore[s.attr] || []).some(i => i.data));
-    if (hasNewImgs) {
-      toast('Đang upload ảnh lên Google Drive...', 'info');
-    }
+    showCyberProgress(true, 50, hasNewImgs ? 'ĐANG TẢI ẢNH LÊN CLOUD...' : 'ĐANG ĐỒNG BỘ LÊN SHEETS...');
     try {
       let ok = false;
       let json = null;
@@ -4720,13 +4739,18 @@ async function saveTicket() {
           // Xóa base64 local vì đã có URL Drive → tránh tốn quota
           clearLocalImages(savedTicket.id);
         }
-        if (hasNewImgs) toast('Ảnh đã lưu lên Google Drive!', 'success');
-        else toast('Phiếu đã đồng bộ lên Sheets', 'success');
+        showCyberProgress(false, 100, hasNewImgs ? 'LƯU CLOUD THÀNH CÔNG!' : 'ĐÃ ĐỒNG BỘ LÊN SHEETS!');
+      } else {
+        toast('Lưu local OK, nhưng sync Drive thất bại (sẽ được tự động đồng bộ lại sau)', 'info');
+        showCyberProgress(false, 100, 'LƯU THÀNH CÔNG (OFFLINE)');
       }
     } catch(e) {
       toast('Lưu local OK, nhưng sync Drive thất bại (sẽ được tự động đồng bộ lại sau)', 'info');
+      showCyberProgress(false, 100, 'LƯU THÀNH CÔNG (OFFLINE)');
       console.warn('[Drive sync]', e);
     }
+  } else {
+    showCyberProgress(false, 100, 'ĐÃ LƯU!');
   }
   } finally {
     _savingTicket = false;
@@ -5720,25 +5744,26 @@ async function syncDrive() {
   const syncBtnIcon = document.querySelector('button[onclick="syncDrive()"] i');
   if (syncBtnIcon) syncBtnIcon.classList.add('spin-animation');
 
-  toast('Đang đồng bộ dữ liệu toàn hệ thống...', 'info');
+  showCyberProgress(true, 40, 'ĐANG ĐỒNG BỘ DỮ LIỆU...');
   isSyncingDrive = true;
   try {
     const stats = await backgroundSyncLoop();
     if (syncBtnIcon) syncBtnIcon.classList.remove('spin-animation');
     
     if (stats.pushed === 0 && stats.imported === 0 && stats.updated === 0 && stats.deleted === 0) {
-      toast('Dữ liệu đã mới nhất!', 'success');
+      showCyberProgress(false, 100, 'DỮ LIỆU ĐÃ MỚI NHẤT!');
     } else {
       let details = [];
-      if (stats.pushed > 0) details.push(`đẩy ${stats.pushed} phiếu lên`);
-      if (stats.imported > 0) details.push(`tải ${stats.imported} phiếu mới`);
-      if (stats.updated > 0) details.push(`cập nhật ${stats.updated} phiếu`);
-      if (stats.deleted > 0) details.push(`xóa ${stats.deleted} phiếu`);
-      toast('Đồng bộ xong: ' + details.join(', '), 'success');
+      if (stats.pushed > 0) details.push(`đẩy ${stats.pushed}`);
+      if (stats.imported > 0) details.push(`tải ${stats.imported}`);
+      if (stats.updated > 0) details.push(`cập ${stats.updated}`);
+      if (stats.deleted > 0) details.push(`xóa ${stats.deleted}`);
+      showCyberProgress(false, 100, 'ĐỒNG BỘ XONG: ' + details.join(', '));
     }
   } catch(e) {
     if (syncBtnIcon) syncBtnIcon.classList.remove('spin-animation');
     toast('Đồng bộ thất bại, vui lòng thử lại', 'error');
+    showCyberProgress(false, 100, 'ĐỒNG BỘ THẤT BẠI!');
     console.warn('[syncDrive failed]', e);
   } finally {
     isSyncingDrive = false;
@@ -5885,18 +5910,66 @@ function exportNewHTML() {
   a.download = 'index.html';
   a.click();
   URL.revokeObjectURL(a.href);
-  toast('✔ Đã xuất file HTML mới! Kéo thả lên Netlify để cập nhật.', 'success');
+  showCyberProgress(false, 100, 'XUẤT FILE HOÀN TẤT!');
 }
 
 // ══════ TOAST ══════
+let cyberProgressTimeout;
+function showCyberProgress(show, percent = 0, msg = 'LOADING...') {
+  let overlay = document.getElementById('cyber-progress-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'cyber-progress-overlay';
+    overlay.innerHTML = `
+      <style>
+        #cyber-progress-overlay { position: fixed; inset: 0; z-index: 100000; display: flex; align-items: center; justify-content: center; background: rgba(4, 8, 16, 0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+        #cyber-progress-overlay.show { opacity: 1; pointer-events: all; }
+        .cyber-progress-container { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+        .cyber-progress-bar-wrap { width: 360px; max-width: 90vw; height: 34px; border: 2px solid #00b4d8; border-radius: 20px; padding: 4px; box-shadow: 0 0 20px rgba(0, 180, 216, 0.4), inset 0 0 15px rgba(0, 180, 216, 0.2); background: #020813; }
+        .cyber-progress-track { width: 100%; height: 100%; border-radius: 12px; background: repeating-linear-gradient(90deg, #0b2240 0px, #0b2240 8px, transparent 8px, transparent 12px); position: relative; overflow: hidden; }
+        .cyber-progress-fill { position: absolute; top: 0; left: 0; height: 100%; width: 0%; background: repeating-linear-gradient(90deg, #00e0ff 0px, #00e0ff 8px, transparent 8px, transparent 12px); box-shadow: 0 0 20px rgba(0, 224, 255, 0.8); transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .cyber-progress-text-wrap { display: flex; align-items: center; justify-content: space-between; width: 100%; max-width: 360px; padding: 0 10px; }
+        .cyber-progress-text { color: #00e0ff; font-family: 'JetBrains Mono', monospace, sans-serif; font-size: 14px; font-weight: 700; letter-spacing: 1.5px; text-shadow: 0 0 10px rgba(0, 224, 255, 0.6); text-transform: uppercase; }
+        .cyber-progress-percent { color: #00e0ff; font-family: 'JetBrains Mono', monospace, sans-serif; font-size: 15px; font-weight: 800; text-shadow: 0 0 10px rgba(0, 224, 255, 0.6); }
+      </style>
+      <div class="cyber-progress-container">
+        <div class="cyber-progress-bar-wrap"><div class="cyber-progress-track"><div class="cyber-progress-fill" id="cyber-fill"></div></div></div>
+        <div class="cyber-progress-text-wrap"><div class="cyber-progress-text" id="cyber-msg">LOADING...</div><div class="cyber-progress-percent" id="cyber-pct">0%</div></div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+  }
+  
+  if (show) {
+    overlay.classList.add('show');
+    document.getElementById('cyber-msg').textContent = msg;
+    document.getElementById('cyber-pct').textContent = Math.round(percent) + '%';
+    document.getElementById('cyber-fill').style.width = Math.round(percent) + '%';
+    clearTimeout(cyberProgressTimeout);
+  } else {
+    overlay.classList.add('show'); // Force show even if completing instantly
+    document.getElementById('cyber-pct').textContent = '100%';
+    document.getElementById('cyber-fill').style.width = '100%';
+    document.getElementById('cyber-msg').textContent = msg || 'HOÀN TẤT';
+    clearTimeout(cyberProgressTimeout);
+    cyberProgressTimeout = setTimeout(() => {
+      overlay.classList.remove('show');
+      setTimeout(() => { document.getElementById('cyber-pct').textContent = '0%'; document.getElementById('cyber-fill').style.width = '0%'; }, 300);
+    }, 1200);
+  }
+}
+
 function toast(msg, type = 'info') {
+  if (type !== 'error') return; // Hide automatic system updates
   const icons = { success: '✔', error: '✘', info: 'ℹ' };
   const wrap = document.getElementById('toast-wrap');
-  const el = document.createElement('div');
-  el.className = `toast ${type}`;
-  el.innerHTML = `<span class="toast-icon">${icons[type]}</span> ${msg}`;
-  wrap.appendChild(el);
-  setTimeout(() => { el.classList.add('hide'); setTimeout(() => el.remove(), 300); }, 3000);
+  if (wrap) {
+    const el = document.createElement('div');
+    el.className = `toast ${type}`;
+    el.innerHTML = `<span class="toast-icon">${icons[type] || '✘'}</span> ${msg}`;
+    wrap.appendChild(el);
+    setTimeout(() => { el.classList.add('hide'); setTimeout(() => el.remove(), 300); }, 5000);
+  }
 }
 
 // ══════ INIT ══════
