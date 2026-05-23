@@ -1928,11 +1928,12 @@ body.logged-in .chat-fab-wrap { display: block; }
           <thead>
             <tr>
               <th></th>
-              <th>#</th>
+              <th>STT</th>
               <th>Ngày nhận</th>
               <th>Khách hàng</th>
               <th>SĐT</th>
               <th>Hãng / Model</th>
+              <th>IMEI</th>
               <th>Lỗi báo</th>
               <th>Tổng tiền</th>
               <th>Trạng thái</th>
@@ -4381,18 +4382,26 @@ function renderTable(tickets) {
     return;
   }
   tbody.innerHTML = tickets.map(t => {
-    const isMine = t.created_by === me;
-    const ownerLabel = t.created_by
-      ? (isMine ? `<span style="color:var(--green);font-size:11px;font-weight:700">● Của tôi</span>` : `<span style="color:var(--text3);font-size:11px">${t.created_by}</span>`)
-      : `<span style="color:var(--text3);font-size:11px">—</span>`;
+    const creator = t.created_by || t.updated_by || '—';
+    
+    // Đồng bộ 100% với tên trên sidebar (dùng displayName nếu có)
+    let displayName = creator;
+    if (creator !== '—' && AUTH && AUTH.users) {
+      const u = AUTH.users.find(x => x.username === creator);
+      if (u && u.displayName) displayName = u.displayName;
+    }
+
+    const ownerLabel = `<span style="color:var(--text3);font-size:11px">${displayName}</span>`;
+      
     return `
     <tr onclick="selectRow(${t.id})" ondblclick="quickView(${t.id})" id="row-${t.id}" class="${t.id === selectedTicketId ? 'selected' : ''}" title="Double-click để xem chi tiết">
       <td><input type="radio" name="sel" ${t.id === selectedTicketId ? 'checked' : ''}></td>
-      <td class="mono">#${t.id}</td>
+      <td class="mono">${t.id}</td>
       <td>${t.date_received || ''}</td>
       <td style="font-weight:600">${t.customer_name}</td>
       <td class="mono">${t.phone || ''}</td>
       <td>${t.brand || ''} ${t.model || ''}</td>
+      <td class="mono" style="font-size:12px;color:var(--text2)">${t.imei || ''}</td>
       <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.problem || ''}</td>
       <td style="font-weight:700;color:var(--green)">${(t.total||0).toLocaleString('vi-VN')}đ</td>
       <td>${statusBadge(t.status || 'Đang sửa')}</td>
