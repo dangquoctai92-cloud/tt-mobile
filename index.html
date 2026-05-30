@@ -913,7 +913,7 @@ body.pre-auth #app { display: none !important; }
   .modal-footer .btn { width: 100%; justify-content: center; }
 
   /* Form 1 cột */
-  #form-body > div { grid-template-columns: 1fr !important; }
+  #form-main-grid, #form-sale-grid { grid-template-columns: 1fr !important; }
   .form-grid { grid-template-columns: 1fr !important; }
   .field-span2 { grid-column: span 1; }
 
@@ -1908,7 +1908,7 @@ body.logged-in .chat-fab-wrap { display: block; }
       </div>
 
       <div class="toolbar">
-        <button class="btn btn-blue" onclick="showForm()"><i data-lucide="plus" style="width:14px;height:14px"></i>Thêm mới</button>
+        <button class="btn btn-blue" onclick="openChoiceModal()"><i data-lucide="plus" style="width:14px;height:14px"></i>Thêm mới</button>
         <button class="btn btn-ghost" id="btn-view" disabled onclick="viewSelected()" style="display:none"><i data-lucide="eye" style="width:13px;height:13px"></i> Xem</button>
         <button class="btn btn-indigo" id="btn-edit" disabled onclick="editSelected()"><i data-lucide="pencil" style="width:13px;height:13px"></i> Sửa</button>
         <button class="btn btn-red" id="btn-del" disabled onclick="deleteSelected()"><i data-lucide="trash-2" style="width:13px;height:13px"></i> Xóa</button>
@@ -2051,7 +2051,7 @@ body.logged-in .chat-fab-wrap { display: block; }
 const SHEET_NAME = "Phiếu Sửa Chữa";
 const USER_SHEET_NAME = "Tài Khoản";
 const FOLDER_NAME = "SuaChuaPro_Images";
-const HEADERS = ["ID","Ngày nhận","Khách hàng","SĐT","Hãng","Model","IMEI","Mật khẩu","Lỗi báo","Tình trạng máy","Chẩn đoán","Phương pháp sửa","Tiền LK","Công thợ","Tổng tiền","Trạng thái","Ngày trả","Ghi chú","Ảnh trước","Ảnh sau","Ảnh tình trạng","Ảnh sửa chữa","Người tạo"];
+const HEADERS = ["ID","Ngày nhận","Khách hàng","SĐT","Hãng","Model","IMEI","Mật khẩu","Lỗi báo","Tình trạng máy","Chẩn đoán","Phương pháp sửa","Tiền LK","Công thợ","Tổng tiền","Trạng thái","Ngày trả","Ghi chú","Ảnh trước","Ảnh sau","Ảnh tình trạng","Ảnh sửa chữa","Người tạo","Loại phiếu","Thời gian bảo hành","Hình thức thanh toán"];
 const USER_HEADERS = ["username","password","displayName","role"];
 const HISTORY_SHEET_NAME = "TicketEditHistory";
 const HISTORY_HEADERS = ["ts","ticket_id","action","by","note"];
@@ -2188,7 +2188,10 @@ function doPost(e) {
         mergeUrls(r.after_images_urls,   afterUrls),
         mergeUrls(r.condition_images_urls,condUrls),
         mergeUrls(r.repair_images_urls,  repairUrls),
-        txt(r.created_by || r.updated_by || '')
+        txt(r.created_by || r.updated_by || ''),
+        r.ticket_type === 'sale' ? 'Bán máy' : 'Sửa chữa',
+        r.notes_warranty || '',
+        r.payment_method || ''
       ];
 
       const ids = ws.getRange(2,1,Math.max(ws.getLastRow()-1,1),1).getValues().flat();
@@ -2592,7 +2595,7 @@ function getChatSheet() {
         <div class="form-grid">
           <div class="field field-span2">
             <label>Apps Script URL (sau khi Deploy)</label>
-            <input type="text" id="cfg-script-url" placeholder="https://script.google.com/macros/s/AKfycbXXXXXXXXXXX/exec" value="https://script.google.com/macros/s/AKfycbyBp7bOu5sEbPIbtmivMcwNLpssxfCn8SCIHbAtzCFCtFt1L1lAl5L-_Qm-RgXCEkiL/exec" style="font-family:var(--mono);font-size:12px">
+            <input type="text" id="cfg-script-url" placeholder="https://script.google.com/macros/s/AKfycbXXXXXXXXXXX/exec" value="https://script.google.com/macros/s/AKfycbxkQwUX3dzu3OUg97_qRxEucLnr_0jHcstwGHxYB6SeFhb6Kzca1IaVvof48cR4d6HCAg/exec" style="font-family:var(--mono);font-size:12px">
             <span style="font-size:11px;color:var(--text3);margin-top:3px">Lấy URL này ở bước: Deploy → Manage deployments → Copy URL</span>
           </div>
         </div>
@@ -2794,6 +2797,123 @@ function getChatSheet() {
   </div>
 </div>
 
+<!-- ══════ CHOICE MODAL ══════ -->
+<style>
+/* Đảm bảo overlay của choice-modal luôn căn giữa hoàn hảo trên mọi kích thước màn hình */
+#choice-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 2050;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+#choice-modal.open {
+  display: flex;
+}
+
+/* Container gọn gàng, không bị thừa chiều cao, bo góc mềm mại */
+.choice-modal-container {
+  background: rgba(18, 25, 38, 0.95);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 22px;
+  max-width: 460px;
+  width: 90vw;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.75);
+  animation: choiceModalPop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+@keyframes choiceModalPop {
+  0% { transform: scale(0.92) translateY(8px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.choice-card-wrapper {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 4px;
+}
+
+/* Style cho các card lựa chọn mang tính hiện đại, glow khi hover */
+.choice-card {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 14px;
+  padding: 18px 12px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.choice-card.repair-card {
+  border: 1.5px solid rgba(59, 130, 246, 0.2);
+}
+.choice-card.sale-card {
+  border: 1.5px solid rgba(16, 185, 129, 0.2);
+}
+.choice-card:hover {
+  transform: translateY(-5px) scale(1.02);
+}
+.choice-card.repair-card:hover {
+  border-color: rgba(59, 130, 246, 0.8) !important;
+  box-shadow: 0 12px 30px rgba(59, 130, 246, 0.25) !important;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(29, 78, 216, 0.08)) !important;
+}
+.choice-card.sale-card:hover {
+  border-color: rgba(16, 185, 129, 0.8) !important;
+  box-shadow: 0 12px 30px rgba(16, 185, 129, 0.25) !important;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(4, 120, 87, 0.08)) !important;
+}
+</style>
+<div class="modal-overlay" id="choice-modal">
+  <div class="choice-modal-container">
+    <!-- Header của modal -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+      <h3 style="margin:0; font-size:17px; font-weight:800; color:#fff; display:flex; align-items:center; gap:8px;">
+        <span style="display:inline-flex; align-items:center; justify-content:center; background:rgba(59,130,246,0.15); width:32px; height:32px; border-radius:8px; color:#3b82f6;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        </span>
+        Tạo Phiếu Mới
+      </h3>
+      <button onclick="closeChoiceModal()" style="background:rgba(255,255,255,0.05); border:none; width:30px; height:30px; border-radius:50%; color:rgba(255,255,255,0.6); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s;"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+    </div>
+    
+    <!-- Body chứa 2 lựa chọn nghiệp vụ -->
+    <div class="choice-card-wrapper">
+      <!-- Tùy chọn 1: Máy sửa -->
+      <div class="choice-card repair-card" onclick="selectChoice('repair')">
+        <div style="background:rgba(59,130,246,0.12); width:46px; height:46px; border-radius:12px; display:flex; align-items:center; justify-content:center; margin-bottom:10px; color:#3b82f6; border: 1px solid rgba(59,130,246,0.25);">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+        </div>
+        <h4 style="margin:0; font-size:15px; font-weight:800; color:#3b82f6; letter-spacing: -0.2px;">Máy Sửa</h4>
+      </div>
+
+      <!-- Tùy chọn 2: Máy bán -->
+      <div class="choice-card sale-card" onclick="selectChoice('sale')">
+        <div style="background:rgba(16,185,129,0.12); width:46px; height:46px; border-radius:12px; display:flex; align-items:center; justify-content:center; margin-bottom:10px; color:#10b981; border: 1px solid rgba(16,185,129,0.25);">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </div>
+        <h4 style="margin:0; font-size:15px; font-weight:800; color:#10b981; letter-spacing: -0.2px;">Máy Bán</h4>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ══════ TICKET FORM MODAL ══════ -->
 <div class="modal-overlay" id="form-modal">
   <div class="modal" style="max-width:1400px;width:98vw;max-height:98vh">
@@ -2803,113 +2923,232 @@ function getChatSheet() {
     </div>
     <div class="modal-body" id="form-body" style="padding:16px;overflow-y:auto">
 
-      <!-- HÀNG 1: 3 CỘT THÔNG TIN CHÍNH -->
-      <div id="form-main-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;flex-shrink:0">
-
-        <!-- CỘT 1: KHÁCH HÀNG & MÁY -->
-        <div class="section-card" style="margin-bottom:0;padding:10px 12px">
-          <div class="section-title" style="margin-bottom:8px"><i data-lucide="smartphone" style="width:13px;height:13px;margin-right:5px;vertical-align:middle"></i>Khách Hàng & Máy</div>
-          <div style="display:flex;flex-direction:column;gap:8px">
-            <div class="field">
-              <label>Tên khách hàng *</label>
-              <input type="text" id="f-customer" style="padding:7px 10px">
-            </div>
-            <div class="field">
-              <label>Số điện thoại</label>
-              <input type="text" id="f-phone" style="padding:7px 10px">
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <!-- CONTAINER CHO MÁY SỬA (GIỮ NGUYÊN FORM CŨ) -->
+      <div id="form-repair-container">
+        <!-- HÀNG 1: 3 CỘT THÔNG TIN CHÍNH -->
+        <div id="form-main-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;flex-shrink:0">
+  
+          <!-- CỘT 1: KHÁCH HÀNG & MÁY -->
+          <div class="section-card" style="margin-bottom:0;padding:10px 12px">
+            <div class="section-title" style="margin-bottom:8px"><i data-lucide="smartphone" style="width:13px;height:13px;margin-right:5px;vertical-align:middle"></i>Khách Hàng & Máy</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
               <div class="field">
-                <label>Hãng</label>
-                <select id="f-brand" onchange="updateModels()" style="padding:7px 10px"></select>
+                <label>Tên khách hàng *</label>
+                <input type="text" id="f-customer" style="padding:7px 10px">
               </div>
               <div class="field">
-                <label>Model máy</label>
-                <div style="position:relative">
-                  <input type="text" id="f-model" autocomplete="off" oninput="filterModelDropdown()" onfocus="showModelDropdown()" style="padding:7px 30px 7px 10px; width:100%">
-                  <button type="button" tabindex="-1" onclick="toggleModelDropdown(event)" style="position:absolute; right:2px; top:50%; transform:translateY(-50%); background:none; border:none; padding:5px; color:var(--text2); cursor:pointer"><i data-lucide="chevron-down" style="width:16px;height:16px"></i></button>
-                  <div id="model-dropdown" style="display:none; position:absolute; top:calc(100% + 4px); left:0; right:0; max-height:220px; overflow-y:auto; background:var(--bg-card); border:1px solid var(--border); border-radius:6px; z-index:1000; box-shadow:0 4px 12px rgba(0,0,0,0.5)"></div>
+                <label>Số điện thoại</label>
+                <input type="text" id="f-phone" style="padding:7px 10px">
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <div class="field">
+                  <label>Hãng</label>
+                  <select id="f-brand" onchange="updateModels()" style="padding:7px 10px"></select>
+                </div>
+                <div class="field">
+                  <label>Model máy</label>
+                  <div style="position:relative">
+                    <input type="text" id="f-model" autocomplete="off" oninput="filterModelDropdown()" onfocus="showModelDropdown()" style="padding:7px 30px 7px 10px; width:100%">
+                    <button type="button" tabindex="-1" onclick="toggleModelDropdown(event)" style="position:absolute; right:2px; top:50%; transform:translateY(-50%); background:none; border:none; padding:5px; color:var(--text2); cursor:pointer"><i data-lucide="chevron-down" style="width:16px;height:16px"></i></button>
+                    <div id="model-dropdown" style="display:none; position:absolute; top:calc(100% + 4px); left:0; right:0; max-height:220px; overflow-y:auto; background:var(--bg-card); border:1px solid var(--border); border-radius:6px; z-index:1000; box-shadow:0 4px 12px rgba(0,0,0,0.5)"></div>
+                  </div>
+                </div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <div class="field">
+                  <label>IMEI / Serial</label>
+                  <div style="position:relative">
+                    <input type="text" id="f-imei" style="padding:7px 30px 7px 10px; width:100%">
+                    <button type="button" class="btn-scan-imei mobile-only" onclick="startBarcodeScan('f-imei')" title="Quét mã vạch" style="position:absolute; right:2px; top:50%; transform:translateY(-50%); background:none; border:none; padding:5px; color:var(--accent); cursor:pointer">
+                      <i data-lucide="scan-barcode" style="width:18px;height:18px"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="field">
+                  <label>Mật khẩu máy</label>
+                  <input type="text" id="f-password" style="padding:7px 10px">
                 </div>
               </div>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          </div>
+  
+          <!-- CỘT 2: TÌNH TRẠNG & CHẨN ĐOÁN -->
+          <div class="section-card" style="margin-bottom:0;padding:10px 12px">
+            <div class="section-title" style="margin-bottom:8px"><i data-lucide="stethoscope" style="width:13px;height:13px;margin-right:5px;vertical-align:middle"></i>Tình Trạng & Chẩn Đoán</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
               <div class="field">
-                <label>IMEI / Serial</label>
-                <div style="position:relative">
-                  <input type="text" id="f-imei" style="padding:7px 30px 7px 10px; width:100%">
-                  <button type="button" class="btn-scan-imei mobile-only" onclick="startBarcodeScan('f-imei')" title="Quét mã vạch" style="position:absolute; right:2px; top:50%; transform:translateY(-50%); background:none; border:none; padding:5px; color:var(--accent); cursor:pointer">
-                    <i data-lucide="scan-barcode" style="width:18px;height:18px"></i>
-                  </button>
+                <label>Lỗi khách báo</label>
+                <input type="text" id="f-problem" style="padding:7px 10px">
+              </div>
+              <div class="field">
+                <label>Tình trạng lúc nhận</label>
+                <input type="text" id="f-condition" style="padding:7px 10px">
+              </div>
+              <div class="field">
+                <label>Hướng xử lý (Chẩn đoán)</label>
+                <input type="text" id="f-diagnosis" style="padding:7px 10px">
+              </div>
+              <div class="field">
+                <label>Phương pháp sửa / Linh kiện thay</label>
+                <input type="text" id="f-repair-method" style="padding:7px 10px">
+              </div>
+            </div>
+          </div>
+  
+          <!-- CỘT 3: CHI PHÍ & BÀN GIAO -->
+          <div class="section-card" id="cost-handover-section" style="margin-bottom:0;padding:10px 12px">
+            <div class="section-title" id="cost-handover-title" style="margin-bottom:8px"><i data-lucide="receipt" style="width:13px;height:13px;margin-right:5px;vertical-align:middle"></i>Chi Phí & Bàn Giao</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div id="cost-money-row" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <div class="field">
+                  <label>Thu khách (VNĐ)</label>
+                  <input type="number" id="f-total" oninput="calcProfit()" style="padding:7px 10px">
+                </div>
+                <div class="field">
+                  <label>Tiền linh kiện (VNĐ)</label>
+                  <input type="number" id="f-parts" oninput="calcProfit()" style="padding:7px 10px">
+                </div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <div class="field" id="profit-field">
+                  <label>Lợi nhuận (VNĐ)</label>
+                  <input type="text" id="f-profit" readonly style="padding:7px 10px">
+                </div>
+                <div class="field">
+                  <label>Trạng thái</label>
+                  <select id="f-status" onchange="onStatusChange(this.value)" style="padding:7px 10px">
+                    <option value="Đang sửa">Đang sửa</option>
+                    <option value="Hoàn thành">Hoàn thành</option>
+                    <option value="Chờ linh kiện">Chờ linh kiện</option>
+                    <option value="Trả lại">Trả lại</option>
+                    <option value="Khách không lấy">Khách không lấy</option>
+                  </select>
                 </div>
               </div>
               <div class="field">
-                <label>Mật khẩu máy</label>
-                <input type="text" id="f-password" style="padding:7px 10px">
+                <label>Ngày trả máy</label>
+                <input type="date" id="f-return-date" style="padding:7px 10px">
+              </div>
+              <div class="field">
+                <label>Ghi chú nội bộ</label>
+                <textarea id="f-notes" style="min-height:42px;padding:6px 10px;resize:none"></textarea>
               </div>
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- CỘT 2: TÌNH TRẠNG & CHẨN ĐOÁN -->
-        <div class="section-card" style="margin-bottom:0;padding:10px 12px">
-          <div class="section-title" style="margin-bottom:8px"><i data-lucide="stethoscope" style="width:13px;height:13px;margin-right:5px;vertical-align:middle"></i>Tình Trạng & Chẩn Đoán</div>
-          <div style="display:flex;flex-direction:column;gap:8px">
-            <div class="field">
-              <label>Lỗi khách báo</label>
-              <input type="text" id="f-problem" style="padding:7px 10px">
+      <!-- CONTAINER CHO MÁY BÁN (FORM THIẾT KẾ MỚI) -->
+      <div id="form-sale-container" style="display:none;">
+        <div id="form-sale-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom:16px;">
+          <!-- CỘT 1: KHÁCH HÀNG & MÁY BÁN -->
+          <div class="section-card" style="margin-bottom:0; padding:10px 12px;">
+            <div class="section-title" style="margin-bottom:8px;">
+              <i data-lucide="smartphone" style="width:13px;height:13px;margin-right:5px;vertical-align:middle"></i>Khách Hàng & Máy Bán
             </div>
-            <div class="field">
-              <label>Tình trạng lúc nhận</label>
-              <input type="text" id="f-condition" style="padding:7px 10px">
-            </div>
-            <div class="field">
-              <label>Hướng xử lý (Chẩn đoán)</label>
-              <input type="text" id="f-diagnosis" style="padding:7px 10px">
-            </div>
-            <div class="field">
-              <label>Phương pháp sửa / Linh kiện thay</label>
-              <input type="text" id="f-repair-method" style="padding:7px 10px">
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              <div class="field">
+                <label>Tên khách hàng mua *</label>
+                <input type="text" id="fs-customer" style="padding:7px 10px;">
+              </div>
+              <div class="field">
+                <label>Số điện thoại</label>
+                <input type="text" id="fs-phone" style="padding:7px 10px;">
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                <div class="field">
+                  <label>Hãng máy</label>
+                  <select id="fs-brand" onchange="updateSaleModels()" style="padding:7px 10px;"></select>
+                </div>
+                <div class="field">
+                  <label>Model máy</label>
+                  <div style="position:relative">
+                    <input type="text" id="fs-model" autocomplete="off" oninput="filterSaleModelDropdown()" onfocus="showSaleModelDropdown()" style="padding:7px 30px 7px 10px; width:100%">
+                    <button type="button" tabindex="-1" onclick="toggleSaleModelDropdown(event)" style="position:absolute; right:2px; top:50%; transform:translateY(-50%); background:none; border:none; padding:5px; color:var(--text2); cursor:pointer"><i data-lucide="chevron-down" style="width:16px;height:16px"></i></button>
+                    <div id="sale-model-dropdown" style="display:none; position:absolute; top:calc(100% + 4px); left:0; right:0; max-height:220px; overflow-y:auto; background:var(--bg-card); border:1px solid var(--border); border-radius:6px; z-index:1000; box-shadow:0 4px 12px rgba(0,0,0,0.5)"></div>
+                  </div>
+                </div>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                <div class="field">
+                  <label>IMEI / Serial máy bán</label>
+                  <div style="position:relative">
+                    <input type="text" id="fs-imei" style="padding:7px 30px 7px 10px; width:100%">
+                    <button type="button" class="btn-scan-imei mobile-only" onclick="startBarcodeScan('fs-imei')" title="Quét mã vạch" style="position:absolute; right:2px; top:50%; transform:translateY(-50%); background:none; border:none; padding:5px; color:var(--accent); cursor:pointer">
+                      <i data-lucide="scan-barcode" style="width:18px;height:18px"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="field">
+                  <label>Trạng thái ngoại hình</label>
+                  <input type="text" id="fs-condition" list="fs-condition-list" style="padding:7px 10px; width:100%" placeholder="Chọn hoặc tự nhập...">
+                  <datalist id="fs-condition-list">
+                    <option value="Mới 100% (Fullbox)"></option>
+                    <option value="Like New 99%"></option>
+                    <option value="Cũ 98%"></option>
+                    <option value="Cũ 95%"></option>
+                    <option value="Cũ nát/Hỏng"></option>
+                  </datalist>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- CỘT 3: CHI PHÍ & BÀN GIAO -->
-        <div class="section-card" id="cost-handover-section" style="margin-bottom:0;padding:10px 12px">
-          <div class="section-title" id="cost-handover-title" style="margin-bottom:8px"><i data-lucide="receipt" style="width:13px;height:13px;margin-right:5px;vertical-align:middle"></i>Chi Phí & Bàn Giao</div>
-          <div style="display:flex;flex-direction:column;gap:8px">
-            <div id="cost-money-row" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-              <div class="field">
-                <label>Thu khách (VNĐ)</label>
-                <input type="number" id="f-total" oninput="calcProfit()" style="padding:7px 10px">
-              </div>
-              <div class="field">
-                <label>Tiền linh kiện (VNĐ)</label>
-                <input type="number" id="f-parts" oninput="calcProfit()" style="padding:7px 10px">
-              </div>
+          <!-- CỘT 2: CHI PHÍ, BẢO HÀNH & THANH TOÁN -->
+          <div class="section-card" style="margin-bottom:0; padding:10px 12px;">
+            <div class="section-title" style="margin-bottom:8px;">
+              <i data-lucide="receipt" style="width:13px;height:13px;margin-right:5px;vertical-align:middle"></i>Chi Phí & Giao Dịch
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-              <div class="field" id="profit-field">
-                <label>Lợi nhuận (VNĐ)</label>
-                <input type="text" id="f-profit" readonly style="padding:7px 10px">
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              <div id="fs-cost-row" style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                <div class="field">
+                  <label>Giá nhập máy (VNĐ) *</label>
+                  <input type="number" id="fs-parts" oninput="calcSaleProfit()" style="padding:7px 10px;">
+                </div>
+                <div class="field">
+                  <label>Giá bán máy (VNĐ) *</label>
+                  <input type="number" id="fs-total" oninput="calcSaleProfit()" style="padding:7px 10px;">
+                </div>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                <div class="field" id="fs-profit-field">
+                  <label>Lợi nhuận (VNĐ)</label>
+                  <input type="text" id="fs-profit" readonly style="padding:7px 10px;">
+                </div>
+                <div class="field">
+                  <label>Bảo hành phần cứng</label>
+                  <select id="fs-warranty" style="padding:7px 10px;">
+                    <option value="Không bảo hành">Không bảo hành</option>
+                    <option value="Bảo hành 1 tháng">Bảo hành 1 tháng</option>
+                    <option value="Bảo hành 3 tháng">Bảo hành 3 tháng</option>
+                    <option value="Bảo hành 6 tháng">Bảo hành 6 tháng</option>
+                    <option value="Bảo hành 12 tháng">Bảo hành 12 tháng</option>
+                  </select>
+                </div>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                <div class="field">
+                  <label>Hình thức thanh toán</label>
+                  <select id="fs-payment-method" style="padding:7px 10px;">
+                    <option value="Tiền mặt">Tiền mặt</option>
+                    <option value="Chuyển khoản">Chuyển khoản</option>
+                    <option value="Trả góp">Trả góp</option>
+                    <option value="Quẹt thẻ">Quẹt thẻ</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>Trạng thái thanh toán</label>
+                  <select id="fs-status" style="padding:7px 10px;">
+                    <option value="Đã thanh toán">Đã thanh toán</option>
+                    <option value="Còn nợ">Còn nợ</option>
+                    <option value="Đã hủy">Đã hủy</option>
+                  </select>
+                </div>
               </div>
               <div class="field">
-                <label>Trạng thái</label>
-                <select id="f-status" onchange="onStatusChange(this.value)" style="padding:7px 10px">
-                  <option value="Đang sửa">Đang sửa</option>
-                  <option value="Hoàn thành">Hoàn thành</option>
-                  <option value="Chờ linh kiện">Chờ linh kiện</option>
-                  <option value="Trả lại">Trả lại</option>
-                  <option value="Khách không lấy">Khách không lấy</option>
-                </select>
+                <label>Ghi chú bán máy</label>
+                <textarea id="fs-notes" style="min-height:42px; padding:6px 10px; resize:none;"></textarea>
               </div>
-            </div>
-            <div class="field">
-              <label>Ngày trả máy</label>
-              <input type="date" id="f-return-date" style="padding:7px 10px">
-            </div>
-            <div class="field">
-              <label>Ghi chú nội bộ</label>
-              <textarea id="f-notes" style="min-height:42px;padding:6px 10px;resize:none"></textarea>
             </div>
           </div>
         </div>
@@ -3038,7 +3277,7 @@ function getChatSheet() {
       <span>Thống kê</span>
     </button>
     </div>
-    <div class="bn-fab" onclick="showForm()">
+    <div class="bn-fab" onclick="openChoiceModal()">
       <button class="bn-fab-btn" aria-label="Thêm phiếu mới">
         <i data-lucide="plus" style="width:24px;height:24px;stroke:#fff"></i>
       </button>
@@ -3118,7 +3357,7 @@ function waitForImageProcessingDone() {
 }
 
 // ══════ HARDCODED CONFIG ══════
-const HARDCODED_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyXaep_MMGmjG-pUdEoEh3RFAYRTTn9-RevZCTVoaML2SV2BgUtkiaEQIf82KVWIrXlWA/exec';
+const HARDCODED_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxkQwUX3dzu3OUg97_qRxEucLnr_0jHcstwGHxYB6SeFhb6Kzca1IaVvof48cR4d6HCAg/exec';
 
 // Load từ localStorage
 function loadStorage() {
@@ -3131,8 +3370,13 @@ function loadStorage() {
     if (s) SETTINGS = { ...SETTINGS, ...JSON.parse(s) };
   } catch(e) {}
   // Luon dam bao URL duoc cai san, khong bi mat
-  SETTINGS.scriptUrl = HARDCODED_SCRIPT_URL;
-  SETTINGS.driveConnected = true;
+  if (!SETTINGS.scriptUrl || 
+      SETTINGS.scriptUrl === 'https://script.google.com/macros/s/AKfycbyXaep_MMGmjG-pUdEoEh3RFAYRTTn9-RevZCTVoaML2SV2BgUtkiaEQIf82KVWIrXlWA/exec' ||
+      SETTINGS.scriptUrl === 'https://script.google.com/macros/s/AKfycbyBp7bOu5sEbPIbtmivMcwNLpssxfCn8SCIHbAtzCFCtFt1L1lAl5L-_Qm-RgXCEkiL/exec') {
+    SETTINGS.scriptUrl = HARDCODED_SCRIPT_URL;
+    SETTINGS.driveConnected = true;
+    saveStorage();
+  }
 }
 function saveStorage() {
   try {
@@ -3167,7 +3411,11 @@ function saveStorage() {
   }
   try { localStorage.setItem('suachua_auth', JSON.stringify({ users: AUTH.users })); } catch(e) {}
   try {
-    const toSave = { ...SETTINGS, scriptUrl: HARDCODED_SCRIPT_URL, driveConnected: true };
+    const toSave = { ...SETTINGS };
+    if (!toSave.scriptUrl) {
+      toSave.scriptUrl = HARDCODED_SCRIPT_URL;
+      toSave.driveConnected = true;
+    }
     localStorage.setItem('suachua_settings', JSON.stringify(toSave));
   } catch(e) {}
 }
@@ -3215,7 +3463,9 @@ async function fetchWithTimeout(url, timeoutMs = 8000) {
 
 // Lấy users từ Sheets bằng GET (tránh CORS của POST)
 async function fetchUsersFromSheets() {
-  const url = HARDCODED_SCRIPT_URL + '?action=getUsers&t=' + Date.now();
+  const base = SETTINGS.scriptUrl || HARDCODED_SCRIPT_URL;
+  const sep = base.includes('?') ? '&' : '?';
+  const url = base + sep + 'action=getUsers&t=' + Date.now();
   const res = await fetchWithTimeout(url, 8000);
   const json = await res.json();
   if (json.ok && json.users && json.users.length) {
@@ -3400,6 +3650,9 @@ async function autoSyncFromSheets() {
         condition_images: JSON.stringify(parseImgCol(r[20])),
         repair_images:    JSON.stringify(parseImgCol(r[21])),
         created_by: (r[22] !== undefined && String(r[22]).trim() !== '') ? String(r[22]).trim() : (existingTicket ? (existingTicket.created_by || '') : ''),
+        ticket_type: (r[23] === 'Bán máy' || String(r[8]).trim() === 'Bán máy') ? 'sale' : 'repair',
+        notes_warranty: r[24] !== undefined ? String(r[24]).trim() : (existingTicket ? (existingTicket.notes_warranty || '') : ''),
+        payment_method: r[25] !== undefined ? String(r[25]).trim() : (existingTicket ? (existingTicket.payment_method || '') : ''),
       };
       if (idx === -1) { DB.tickets.unshift(ticketFromSheet); if (id >= DB.nextId) DB.nextId = id + 1; imported++; }
       else { DB.tickets[idx] = { ...DB.tickets[idx], ...ticketFromSheet }; updated++; }
@@ -3800,6 +4053,100 @@ const BRANDS_MODELS = {
   'Realme': ['Realme GT 7 Pro','Realme GT 7','Realme GT 6 Pro','Realme GT 6','Realme 13 Pro+','Realme 13 Pro','Realme 13','Realme 12 Pro+','Realme 12','Realme C67','Realme C55'],
   'Khác': []
 };
+// ══════ NEW SALE BRAND / MODEL FUNCTIONS & MODAL HANDLERS ══════
+function openChoiceModal() {
+  const modal = document.getElementById('choice-modal');
+  if (modal) modal.classList.add('open');
+}
+function closeChoiceModal() {
+  const modal = document.getElementById('choice-modal');
+  if (modal) modal.classList.remove('open');
+}
+function selectChoice(type) {
+  closeChoiceModal();
+  showForm(null, false, type);
+}
+function calcSaleProfit() {
+  const total = parseInt(document.getElementById('fs-total').value) || 0;
+  const parts = parseInt(document.getElementById('fs-parts').value) || 0;
+  const profitField = document.getElementById('fs-profit');
+  if (profitField) profitField.value = (total - parts).toLocaleString('vi-VN');
+}
+function populateSaleBrands() {
+  const sel = document.getElementById('fs-brand');
+  if (!sel) return;
+  sel.innerHTML = '';
+  Object.keys(BRANDS_MODELS).forEach(b => {
+    const o = document.createElement('option'); o.value = b; o.textContent = b; sel.appendChild(o);
+  });
+  updateSaleModels();
+}
+function updateSaleModels() {
+  filterSaleModelDropdown();
+}
+function filterSaleModelDropdown() {
+  const brandEl = document.getElementById('fs-brand');
+  if (!brandEl) return;
+  const brand = brandEl.value;
+  const models = BRANDS_MODELS[brand] || [];
+  const inp = document.getElementById('fs-model');
+  if (!inp) return;
+  const val = (inp.value || '').toLowerCase();
+  const drop = document.getElementById('sale-model-dropdown');
+  if (!drop) return;
+  
+  drop.innerHTML = '';
+  const filtered = models.filter(m => m.toLowerCase().includes(val));
+  
+  if (filtered.length === 0) {
+    drop.style.display = 'none';
+    return;
+  }
+  
+  filtered.forEach(m => {
+    const d = document.createElement('div');
+    d.textContent = m;
+    d.style.padding = '10px 12px';
+    d.style.cursor = 'pointer';
+    d.style.borderBottom = '1px solid var(--border)';
+    d.style.color = 'var(--text)';
+    
+    d.onmouseover = () => d.style.background = 'rgba(255,255,255,0.08)';
+    d.onmouseout = () => d.style.background = 'transparent';
+    
+    d.onmousedown = function(e) {
+      e.preventDefault(); 
+      inp.value = m;
+      drop.style.display = 'none';
+      drop.dataset.forceOpen = 'false';
+    };
+    drop.appendChild(d);
+  });
+  
+  if (document.activeElement === inp || drop.dataset.forceOpen === 'true') {
+    drop.style.display = 'block';
+  }
+}
+function showSaleModelDropdown() {
+  const drop = document.getElementById('sale-model-dropdown');
+  if (drop) drop.dataset.forceOpen = 'true';
+  filterSaleModelDropdown();
+}
+function toggleSaleModelDropdown(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  const inp = document.getElementById('fs-model');
+  const drop = document.getElementById('sale-model-dropdown');
+  if (!drop || !inp) return;
+  if (drop.style.display === 'block') {
+    drop.style.display = 'none';
+    drop.dataset.forceOpen = 'false';
+  } else {
+    inp.focus();
+    drop.dataset.forceOpen = 'true';
+    filterSaleModelDropdown();
+  }
+}
 function populateBrands() {
   const sel = document.getElementById('f-brand');
   sel.innerHTML = '';
@@ -3885,6 +4232,15 @@ document.addEventListener('mousedown', (e) => {
       drop.dataset.forceOpen = 'false';
     }
   }
+  const saleDrop = document.getElementById('sale-model-dropdown');
+  if (saleDrop && saleDrop.style.display === 'block') {
+    const saleInp = document.getElementById('fs-model');
+    const saleBtn = saleInp.nextElementSibling;
+    if (!saleDrop.contains(e.target) && e.target !== saleInp && (!saleBtn || !saleBtn.contains(e.target))) {
+      saleDrop.style.display = 'none';
+      saleDrop.dataset.forceOpen = 'false';
+    }
+  }
 });
 
 // ══════ IMAGE HANDLING ══════
@@ -3894,10 +4250,18 @@ const IMG_SLOTS = [
   { attr: 'condition_images', label: 'Tình trạng' },
   { attr: 'repair_images', label: 'Ảnh sửa' },
 ];
-function buildImgGrid() {
+function buildImgGrid(type = 'repair') {
   const g = document.getElementById('img-grid');
+  if (!g) return;
   g.innerHTML = '';
-  IMG_SLOTS.forEach(slot => {
+  const slots = type === 'sale' ? [
+    { attr: 'before_images', label: 'Ảnh thiết bị 1' },
+    { attr: 'after_images', label: 'Ảnh thiết bị 2' },
+    { attr: 'condition_images', label: 'Hóa đơn mua' },
+    { attr: 'repair_images', label: 'Ảnh phụ kiện' },
+  ] : IMG_SLOTS;
+  
+  slots.forEach(slot => {
     g.innerHTML += `
     <div class="img-slot">
       <div class="img-slot-label">${slot.label}</div>
@@ -4348,7 +4712,16 @@ function initViewerDrag() {
 
 // ══════ TABLE ══════
 function statusBadge(s) {
-  const map = { 'Hoàn thành': 'green', 'Đang sửa': 'blue', 'Chờ linh kiện': 'yellow', 'Khách không lấy': 'red', 'Trả lại': 'gray' };
+  const map = { 
+    'Hoàn thành': 'green', 
+    'Đang sửa': 'blue', 
+    'Chờ linh kiện': 'yellow', 
+    'Khách không lấy': 'red', 
+    'Trả lại': 'gray',
+    'Đã thanh toán': 'green',
+    'Còn nợ': 'yellow',
+    'Đã hủy': 'red'
+  };
   const cls = map[s] || 'gray';
   return `<span class="badge badge-${cls}">${s}</span>`;
 }
@@ -4392,19 +4765,24 @@ function renderTable(tickets) {
     }
 
     const ownerLabel = `<span style="color:var(--text3);font-size:11px">${displayName}</span>`;
+    
+    const isSale = (t.ticket_type === 'sale');
+    const badge = isSale 
+      ? `<span class="badge badge-green" style="font-size:9.5px;padding:2px 4px;margin-right:4px;vertical-align:middle;display:inline-flex;align-items:center;gap:2px;">💰 Bán</span>` 
+      : `<span class="badge badge-blue" style="font-size:9.5px;padding:2px 4px;margin-right:4px;vertical-align:middle;display:inline-flex;align-items:center;gap:2px;">🛠️ Sửa</span>`;
       
     return `
     <tr onclick="selectRow(${t.id})" ondblclick="quickView(${t.id})" id="row-${t.id}" class="${t.id === selectedTicketId ? 'selected' : ''}" title="Double-click để xem chi tiết">
       <td><input type="radio" name="sel" ${t.id === selectedTicketId ? 'checked' : ''}></td>
-      <td class="mono">${t.id}</td>
+      <td class="mono" style="white-space:nowrap">${badge}#${t.id}</td>
       <td>${t.date_received || ''}</td>
       <td style="font-weight:600">${t.customer_name}</td>
       <td class="mono">${t.phone || ''}</td>
       <td>${t.brand || ''} ${t.model || ''}</td>
       <td class="mono" style="font-size:12px;color:var(--text2)">${t.imei || ''}</td>
-      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.problem || ''}</td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${isSale ? `Bán máy (BH: ${t.notes_warranty || 'Không'})` : (t.problem || '')}</td>
       <td style="font-weight:700;color:var(--green)">${(t.total||0).toLocaleString('vi-VN')}đ</td>
-      <td>${statusBadge(t.status || 'Đang sửa')}</td>
+      <td>${statusBadge(t.status || (isSale ? 'Đã thanh toán' : 'Đang sửa'))}</td>
       <td>${ownerLabel}</td>
     </tr>`;
   }).join('');
@@ -4462,29 +4840,79 @@ function filterTable(q) {
 }
 
 // ══════ FORM ══════
-function showForm(ticketId = null, readonly = false) {
+function showForm(ticketId = null, readonly = false, type = 'repair') {
   editingTicketId = readonly ? null : ticketId; // readonly = không cho lưu
   const role = AUTH.currentUser?.role || 'viewer';
   const isAdmin = role === 'admin';
-  populateBrands();
-  buildImgGrid();
-  // reset
+  
+  let currentType = type;
+  if (ticketId) {
+    const t = DB.tickets.find(x => x.id === ticketId);
+    if (t) {
+      currentType = t.ticket_type || 'repair';
+    }
+  }
+
+  // Tải lưới ảnh dựa vào loại phiếu
+  buildImgGrid(currentType);
   imgStore = { before_images: [], after_images: [], condition_images: [], repair_images: [] };
-  ['f-customer','f-phone','f-imei','f-password','f-problem','f-condition','f-diagnosis','f-repair-method','f-total','f-parts','f-notes','f-return-date'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = '';
-  });
-  document.getElementById('f-profit').value = '';
-  document.getElementById('f-status').value = 'Đang sửa';
 
-  // Reset tab ghi chú trong phiếu
-  // (ghi chú là textarea thường, không dùng tab)
+  if (currentType === 'sale') {
+    document.getElementById('form-repair-container').style.display = 'none';
+    document.getElementById('form-sale-container').style.display = 'block';
+    
+    // reset sale form
+    ['fs-customer','fs-phone','fs-imei','fs-model','fs-parts','fs-total','fs-notes'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    document.getElementById('fs-profit').value = '';
+    document.getElementById('fs-condition').value = 'Mới 100% (Fullbox)';
+    document.getElementById('fs-warranty').value = 'Bảo hành 1 tháng';
+    document.getElementById('fs-payment-method').value = 'Tiền mặt';
+    document.getElementById('fs-status').value = 'Đã thanh toán';
 
-  // Title
-  if (readonly) {
-    document.getElementById('form-title').textContent = 'Xem phiếu #' + ticketId;
+    // Title
+    if (readonly) {
+      document.getElementById('form-title').textContent = 'Xem hóa đơn bán máy #' + ticketId;
+    } else {
+      document.getElementById('form-title').textContent = ticketId ? 'Sửa hóa đơn bán máy #' + ticketId : 'Tạo hóa đơn bán máy mới';
+    }
+
+    // Quyền xem giá nhập / lợi nhuận
+    const costRow = document.getElementById('fs-cost-row');
+    const profitFld = document.getElementById('fs-profit-field');
+    if (costRow) costRow.style.display = isAdmin ? 'grid' : 'none';
+    if (profitFld) profitFld.style.display = isAdmin ? '' : 'none';
+
   } else {
-    document.getElementById('form-title').textContent = ticketId ? 'Sửa phiếu #' + ticketId : 'Tạo phiếu mới';
+    document.getElementById('form-repair-container').style.display = 'block';
+    document.getElementById('form-sale-container').style.display = 'none';
+    
+    // reset repair form
+    populateBrands();
+    ['f-customer','f-phone','f-imei','f-password','f-problem','f-condition','f-diagnosis','f-repair-method','f-total','f-parts','f-notes','f-return-date'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    document.getElementById('f-profit').value = '';
+    document.getElementById('f-status').value = 'Đang sửa';
+
+    // Title
+    if (readonly) {
+      document.getElementById('form-title').textContent = 'Xem phiếu #' + ticketId;
+    } else {
+      document.getElementById('form-title').textContent = ticketId ? 'Sửa phiếu #' + ticketId : 'Tạo phiếu mới';
+    }
+
+    const costTitle = document.getElementById('cost-handover-title');
+    if (costTitle) {
+      costTitle.innerHTML = `<i data-lucide="receipt" style="width:13px;height:13px;margin-right:5px;vertical-align:middle"></i>${isAdmin ? 'Chi Phí & Bàn Giao' : 'Bàn Giao'}`;
+    }
+    const costMoneyRow = document.getElementById('cost-money-row');
+    const profitField = document.getElementById('profit-field');
+    if (costMoneyRow) costMoneyRow.style.display = isAdmin ? 'grid' : 'none';
+    if (profitField) profitField.style.display = isAdmin ? '' : 'none';
   }
 
   // Ẩn/hiện các nút footer theo mode
@@ -4495,16 +4923,6 @@ function showForm(ticketId = null, readonly = false) {
   
   const saveText = document.getElementById('btn-save-text');
   if (saveText) saveText.textContent = ticketId ? 'Cập nhật' : 'Lưu phiếu';
-  const formGrid = document.getElementById('form-main-grid');
-  if (formGrid) formGrid.style.gridTemplateColumns = '1fr 1fr 1fr';
-  const costTitle = document.getElementById('cost-handover-title');
-  if (costTitle) {
-    costTitle.innerHTML = `<i data-lucide="receipt" style="width:13px;height:13px;margin-right:5px;vertical-align:middle"></i>${isAdmin ? 'Chi Phí & Bàn Giao' : 'Bàn Giao'}`;
-  }
-  const costMoneyRow = document.getElementById('cost-money-row');
-  const profitField = document.getElementById('profit-field');
-  if (costMoneyRow) costMoneyRow.style.display = isAdmin ? 'grid' : 'none';
-  if (profitField) profitField.style.display = isAdmin ? '' : 'none';
 
   // Readonly banner + lock form
   const formBody = document.getElementById('form-body');
@@ -4529,31 +4947,65 @@ function showForm(ticketId = null, readonly = false) {
   if (ticketId) {
     const t = DB.tickets.find(x => x.id === ticketId);
     if (!t) return;
-    document.getElementById('f-customer').value = t.customer_name || '';
-    document.getElementById('f-phone').value = normalizePhone(t.phone);
-    document.getElementById('f-brand').value = t.brand || 'Apple';
-    updateModels();
-    document.getElementById('f-model').value = t.model || '';
-    document.getElementById('f-imei').value = normalizeTextField(t.imei);
-    document.getElementById('f-password').value = normalizeTextField(t.password);
-    document.getElementById('f-problem').value = t.problem || '';
-    document.getElementById('f-condition').value = t.machine_condition || '';
-    document.getElementById('f-diagnosis').value = t.diagnosis || '';
-    document.getElementById('f-repair-method').value = t.repair_method || '';
-    document.getElementById('f-total').value = t.total || '';
-    document.getElementById('f-parts').value = t.parts_cost || '';
-    document.getElementById('f-status').value = t.status || 'Đang sửa';
-    document.getElementById('f-return-date').value = normalizeDateForInput(t.date_returned);
-    document.getElementById('f-notes').value = t.notes || '';
-    calcProfit();
-    // Load images — merge base64 chờ upload (chưa lên Drive) từ localStorage riêng
+    
+    if (currentType === 'sale') {
+      document.getElementById('fs-customer').value = t.customer_name || '';
+      document.getElementById('fs-phone').value = normalizePhone(t.phone);
+      document.getElementById('fs-brand').value = t.brand || 'Apple';
+      populateSaleBrands();
+      document.getElementById('fs-brand').value = t.brand || 'Apple';
+      updateSaleModels();
+      document.getElementById('fs-model').value = t.model || '';
+      document.getElementById('fs-imei').value = normalizeTextField(t.imei);
+      document.getElementById('fs-condition').value = t.machine_condition || 'Mới 100% (Fullbox)';
+      document.getElementById('fs-parts').value = t.parts_cost || '';
+      document.getElementById('fs-total').value = t.total || '';
+      document.getElementById('fs-warranty').value = t.notes_warranty || 'Bảo hành 1 tháng';
+      document.getElementById('fs-payment-method').value = t.payment_method || 'Tiền mặt';
+      document.getElementById('fs-status').value = t.status || 'Đã thanh toán';
+      document.getElementById('fs-notes').value = t.notes || '';
+      calcSaleProfit();
+    } else {
+      document.getElementById('f-customer').value = t.customer_name || '';
+      document.getElementById('f-phone').value = normalizePhone(t.phone);
+      document.getElementById('f-brand').value = t.brand || 'Apple';
+      populateBrands();
+      document.getElementById('f-brand').value = t.brand || 'Apple';
+      updateModels();
+      document.getElementById('f-model').value = t.model || '';
+      document.getElementById('f-imei').value = normalizeTextField(t.imei);
+      document.getElementById('f-password').value = normalizeTextField(t.password);
+      document.getElementById('f-problem').value = t.problem || '';
+      document.getElementById('f-condition').value = t.machine_condition || '';
+      document.getElementById('f-diagnosis').value = t.diagnosis || '';
+      document.getElementById('f-repair-method').value = t.repair_method || '';
+      document.getElementById('f-total').value = t.total || '';
+      document.getElementById('f-parts').value = t.parts_cost || '';
+      document.getElementById('f-status').value = t.status || 'Đang sửa';
+      document.getElementById('f-return-date').value = normalizeDateForInput(t.date_returned);
+      document.getElementById('f-notes').value = t.notes || '';
+      calcProfit();
+    }
+
+    // Load images
     const tMerged = mergeLocalImages(t);
-    IMG_SLOTS.forEach(slot => {
+    const slots = currentType === 'sale' ? [
+      { attr: 'before_images' }, { attr: 'after_images' }, { attr: 'condition_images' }, { attr: 'repair_images' }
+    ] : IMG_SLOTS;
+    slots.forEach(slot => {
       imgStore[slot.attr] = tMerged[slot.attr] ? JSON.parse(tMerged[slot.attr]) : [];
       refreshPreview(slot.attr);
     });
+    
     // Re-render lucide icons for banner
     if (typeof lucide !== 'undefined') lucide.createIcons();
+  } else {
+    // New Ticket Mode
+    if (currentType === 'sale') {
+      populateSaleBrands();
+    } else {
+      populateBrands();
+    }
   }
 }
 
@@ -4645,28 +5097,78 @@ async function saveTicket() {
   const saveBtn = document.querySelector('.modal-footer .btn-green');
   if (saveBtn) { saveBtn.disabled = true; saveBtn.style.opacity = '0.6'; saveBtn.style.pointerEvents = 'none'; }
   try {
-  const customer = document.getElementById('f-customer').value.trim();
-  if (!customer) { toast('Vui lòng nhập tên khách hàng!', 'error'); return; }
+  
+  const isSale = (document.getElementById('form-sale-container').style.display === 'block');
+  let customer = '';
+  let ticketData = {};
+  
+  if (isSale) {
+    customer = document.getElementById('fs-customer').value.trim();
+    if (!customer) { toast('Vui lòng nhập tên khách hàng!', 'error'); _savingTicket = false; if (saveBtn) { saveBtn.disabled = false; saveBtn.style.opacity = '1'; saveBtn.style.pointerEvents = 'auto'; } return; }
+    
+    const total = parseInt(document.getElementById('fs-total').value) || 0;
+    const parts_cost = parseInt(document.getElementById('fs-parts').value) || 0;
+    
+    ticketData = {
+      ticket_type: 'sale',
+      customer_name: customer, 
+      phone: normalizePhone(document.getElementById('fs-phone').value),
+      brand: document.getElementById('fs-brand').value, 
+      model: document.getElementById('fs-model').value,
+      imei: normalizeTextField(document.getElementById('fs-imei').value), 
+      password: '',
+      problem: 'Bán máy',
+      machine_condition: document.getElementById('fs-condition').value,
+      diagnosis: '', 
+      repair_method: document.getElementById('fs-payment-method').value,
+      total, 
+      parts_cost, 
+      labor_cost: total - parts_cost, 
+      status: document.getElementById('fs-status').value,
+      date_returned: new Date().toISOString().split('T')[0], 
+      notes: document.getElementById('fs-notes').value,
+      notes_warranty: document.getElementById('fs-warranty').value,
+      payment_method: document.getElementById('fs-payment-method').value,
+      updated_by: AUTH.currentUser?.username || '',
+    };
+  } else {
+    customer = document.getElementById('f-customer').value.trim();
+    if (!customer) { toast('Vui lòng nhập tên khách hàng!', 'error'); _savingTicket = false; if (saveBtn) { saveBtn.disabled = false; saveBtn.style.opacity = '1'; saveBtn.style.pointerEvents = 'auto'; } return; }
+    
+    const total = parseInt(document.getElementById('f-total').value) || 0;
+    const parts_cost = parseInt(document.getElementById('f-parts').value) || 0;
+    
+    ticketData = {
+      ticket_type: 'repair',
+      customer_name: customer, 
+      phone: normalizePhone(document.getElementById('f-phone').value),
+      brand: document.getElementById('f-brand').value, 
+      model: document.getElementById('f-model').value,
+      imei: normalizeTextField(document.getElementById('f-imei').value), 
+      password: normalizeTextField(document.getElementById('f-password').value),
+      problem: document.getElementById('f-problem').value, 
+      machine_condition: document.getElementById('f-condition').value,
+      diagnosis: document.getElementById('f-diagnosis').value, 
+      repair_method: document.getElementById('f-repair-method').value,
+      total, 
+      parts_cost, 
+      labor_cost: total - parts_cost, 
+      status: document.getElementById('f-status').value,
+      date_returned: normalizeDateForInput(document.getElementById('f-return-date').value), 
+      notes: document.getElementById('f-notes').value,
+      notes_warranty: '',
+      payment_method: '',
+      updated_by: AUTH.currentUser?.username || '',
+    };
+  }
   
   showCyberProgress(true, 10, 'ĐANG XỬ LÝ ẢNH...');
   await waitForImageProcessingDone();
   
-  const total = parseInt(document.getElementById('f-total').value) || 0;
-  const parts_cost = parseInt(document.getElementById('f-parts').value) || 0;
   const now = new Date().toLocaleDateString('vi-VN');
 
   // Đóng form ngay, lưu local trước
   showCyberProgress(true, 20, 'ĐANG LƯU DỮ LIỆU...');
-  const ticketData = {
-    customer_name: customer, phone: normalizePhone(document.getElementById('f-phone').value),
-    brand: document.getElementById('f-brand').value, model: document.getElementById('f-model').value,
-    imei: normalizeTextField(document.getElementById('f-imei').value), password: normalizeTextField(document.getElementById('f-password').value),
-    problem: document.getElementById('f-problem').value, machine_condition: document.getElementById('f-condition').value,
-    diagnosis: document.getElementById('f-diagnosis').value, repair_method: document.getElementById('f-repair-method').value,
-    total, parts_cost, labor_cost: total - parts_cost, status: document.getElementById('f-status').value,
-    date_returned: normalizeDateForInput(document.getElementById('f-return-date').value), notes: document.getElementById('f-notes').value,
-    updated_by: AUTH.currentUser?.username || '',
-  };
 
   // Lưu ảnh local (base64) + URL Drive hiện có
   IMG_SLOTS.forEach(s => {
@@ -4692,7 +5194,7 @@ async function saveTicket() {
     
     // Cập nhật giao diện của form đang mở để chuyển sang chế độ sửa
     const formTitle = document.getElementById('form-title');
-    if (formTitle) formTitle.textContent = 'Sửa phiếu #' + editingTicketId;
+    if (formTitle) formTitle.textContent = isSale ? ('Sửa hóa đơn bán máy #' + editingTicketId) : ('Sửa phiếu #' + editingTicketId);
     
     const btnDelete = document.getElementById('btn-delete-ticket');
     if (btnDelete) btnDelete.style.display = 'inline-flex';
@@ -4848,6 +5350,87 @@ function buildPrintHTML(t) {
       />
     </div>`
     : `<div class="ph-img-wrap"><div class="ph-img-label">${label}</div><div class="ph-img-empty">Không có ảnh</div></div>`;
+
+  const isSale = (t.ticket_type === 'sale');
+
+  if (isSale) {
+    return `<!DOCTYPE html><html lang="vi"><head>
+<meta charset="UTF-8">
+<title>Hóa đơn bán máy #${t.id}</title>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  @page { size: A6 portrait; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Be Vietnam Pro', Arial, sans-serif;
+    width: 105mm; min-height: 148mm;
+    background: #fff; color: #111;
+    padding: 6mm 7mm 6mm;
+    font-size: 9pt;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  /* HEADER */
+  .ph-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4mm; padding-bottom: 3mm; border-bottom: 2px solid #10b981; }
+  .ph-shop { font-size: 13pt; font-weight: 800; letter-spacing: -0.3px; color: #111; }
+  .ph-shop span { display: block; font-size: 7pt; font-weight: 400; color: #666; margin-top: 1px; }
+  .ph-ticket-no { text-align: right; }
+  .ph-ticket-no .ph-no { font-size: 16pt; font-weight: 800; color: #10b981; }
+  .ph-ticket-no .ph-date { font-size: 7pt; color: #888; }
+  /* INFO TABLE */
+  .ph-table { width: 100%; border-collapse: collapse; margin-bottom: 3mm; }
+  .ph-table td { padding: 1.8mm 2mm; font-size: 8.5pt; vertical-align: top; border-bottom: 0.5px solid #e8e8e8; }
+  .ph-table td:first-child { font-weight: 700; color: #444; width: 28mm; white-space: nowrap; }
+  .ph-table td:last-child { color: #111; }
+  .ph-section-title { font-size: 7pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: #888; margin: 3mm 0 1.5mm; }
+  /* IMAGES */
+  .ph-imgs { display: flex; gap: 3mm; margin-bottom: 3mm; flex-wrap: wrap; }
+  .ph-img-wrap { flex: 1 1 calc(50% - 1.5mm); min-width: 42mm; }
+  .ph-img-label { font-size: 7pt; font-weight: 700; color: #888; text-align: center; margin-bottom: 1.5mm; text-transform: uppercase; letter-spacing: 0.5px; }
+  .ph-img { width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: 2mm; border: 0.5px solid #ddd; display: block; }
+  .ph-img-empty { width: 100%; aspect-ratio: 4/3; background: #f5f5f5; border-radius: 2mm; border: 0.5px dashed #ccc; display: flex; align-items: center; justify-content: center; font-size: 7pt; color: #bbb; }
+  /* REPAIR BOX */
+  .ph-repair-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 2mm; padding: 2.5mm 3.5mm; margin-bottom: 3mm; }
+  .ph-repair-text { font-size: 10.5pt; font-weight: 800; color: #047857; text-align: center; }
+  .ph-notes { white-space: pre-wrap; word-break: break-word; }
+</style></head><body>
+<div class="ph-header">
+  <div class="ph-shop">T&T Mobile<span>HÓA ĐƠN BÁN HÀNG</span></div>
+  <div class="ph-ticket-no">
+    <div class="ph-no">#${t.id}</div>
+    <div class="ph-date">${t.date_received || ''}</div>
+  </div>
+</div>
+
+<div class="ph-section-title">Thông tin giao dịch</div>
+<table class="ph-table">
+  <tr><td>Khách hàng</td><td><strong>${t.customer_name}</strong></td></tr>
+  <tr><td>Số điện thoại</td><td>${t.phone || '—'}</td></tr>
+  <tr><td>Thiết bị bán</td><td><strong>${t.brand || ''} ${t.model || ''}</strong></td></tr>
+  <tr><td>IMEI / Serial</td><td style="font-family:monospace;font-size:8pt">${t.imei || '—'}</td></tr>
+  <tr><td>Ngoại hình</td><td>${t.machine_condition || '—'}</td></tr>
+  <tr><td>Bảo hành</td><td><strong>${t.notes_warranty || 'Không'}</strong></td></tr>
+  <tr><td>Thanh toán</td><td>${t.payment_method || 'Tiền mặt'} (${t.status || 'Đã thanh toán'})</td></tr>
+</table>
+
+<div class="ph-section-title">Tổng cộng thanh toán</div>
+<div class="ph-repair-box">
+  <div class="ph-repair-text">${fmtMoney(total)}</div>
+</div>
+
+${t.notes ? `
+<div class="ph-section-title">Ghi chú</div>
+<div style="font-size:8pt;color:#333;margin-bottom:3mm;padding:0 2mm;line-height:1.4;" class="ph-notes">${t.notes}</div>
+` : ''}
+
+ ${(beforeSrc || afterSrc) ? `
+<div class="ph-section-title">Hình ảnh thiết bị</div>
+<div class="ph-imgs">
+  ${imgBlock(beforeSrc, 'ẢNH MÁY 1')}
+  ${imgBlock(afterSrc, 'ẢNH MÁY 2')}
+</div>` : ''}
+</body></html>`;
+  }
 
   return `<!DOCTYPE html><html lang="vi"><head>
 <meta charset="UTF-8">
@@ -5704,6 +6287,9 @@ async function pullFromSheets() {
         condition_images: JSON.stringify(parseImgCol(r[20])),
         repair_images:    JSON.stringify(parseImgCol(r[21])),
         created_by: (r[22] !== undefined && String(r[22]).trim() !== '') ? String(r[22]).trim() : (existingTicket ? (existingTicket.created_by || '') : ''),
+        ticket_type: (r[23] === 'Bán máy' || String(r[8]).trim() === 'Bán máy') ? 'sale' : 'repair',
+        notes_warranty: r[24] !== undefined ? String(r[24]).trim() : (existingTicket ? (existingTicket.notes_warranty || '') : ''),
+        payment_method: r[25] !== undefined ? String(r[25]).trim() : (existingTicket ? (existingTicket.payment_method || '') : ''),
       };
       if (idx === -1) { DB.tickets.unshift(ticketFromSheet); if (id >= DB.nextId) DB.nextId = id + 1; imported++; }
       else { DB.tickets[idx] = { ...DB.tickets[idx], ...ticketFromSheet }; updated++; }
