@@ -3147,7 +3147,7 @@ function getChatSheet() {
         <div class="form-grid">
           <div class="field field-span2">
             <label>Apps Script URL (sau khi Deploy)</label>
-            <input type="text" id="cfg-script-url" placeholder="https://script.google.com/macros/s/AKfycbXXXXXXXXXXX/exec" value="https://script.google.com/macros/s/AKfycbxkQwUX3dzu3OUg97_qRxEucLnr_0jHcstwGHxYB6SeFhb6Kzca1IaVvof48cR4d6HCAg/exec" style="font-family:var(--mono);font-size:12px">
+            <input type="text" id="cfg-script-url" placeholder="https://script.google.com/macros/s/AKfycbXXXXXXXXXXX/exec" value="https://script.google.com/macros/s/AKfycbyXaep_MMGmj6-pUdEoEh3RFAYRTTn9-RevZCTVoaML2SV2BgUtkiaEQIf82KVWIrXlWA/exec" style="font-family:var(--mono);font-size:12px">
             <span style="font-size:11px;color:var(--text3);margin-top:3px">Lấy URL này ở bước: Deploy → Manage deployments → Copy URL</span>
           </div>
         </div>
@@ -3931,7 +3931,7 @@ function waitForImageProcessingDone() {
 }
 
 // ══════ HARDCODED CONFIG ══════
-const HARDCODED_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxkQwUX3dzu3OUg97_qRxEucLnr_0jHcstwGHxYB6SeFhb6Kzca1IaVvof48cR4d6HCAg/exec';
+const HARDCODED_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyXaep_MMGmj6-pUdEoEh3RFAYRTTn9-RevZCTVoaML2SV2BgUtkiaEQIf82KVWIrXlWA/exec';
 
 // Load từ localStorage
 function loadStorage() {
@@ -3952,8 +3952,8 @@ function loadStorage() {
     }
     saveStorage();
   }
-  // Luon dam bao URL duoc cai san, khong bi mat
-  if (!SETTINGS.scriptUrl) {
+  // Luon dam bao URL duoc cai san, khong bi mat (tự động cập nhật nếu phát hiện URL cũ của Drive trước đó)
+  if (!SETTINGS.scriptUrl || SETTINGS.scriptUrl === 'https://script.google.com/macros/s/AKfycbxkQwUX3dzu3OUg97_qRxEucLnr_0jHcstwGHxYB6SeFhb6Kzca1IaVvof48cR4d6HCAg/exec') {
     SETTINGS.scriptUrl = HARDCODED_SCRIPT_URL;
     SETTINGS.driveConnected = true;
     saveStorage();
