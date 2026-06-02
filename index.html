@@ -1969,7 +1969,7 @@ body.logged-in .chat-fab-wrap { display: block; }
     <!-- PAGE: GHI CHÚ CÁ NHÂN -->
     <div class="page" id="page-notes">
       <div class="page-title"><i data-lucide="notebook-pen" style="width:20px;height:20px;vertical-align:middle;margin-right:8px"></i>Ghi chú</div>
-      <div class="page-sub">Dùng được với mọi vai trò. Chỉ thấy ghi chú của <strong id="notes-user-label">@…</strong> — lưu cục bộ trên trình duyệt này, không đồng bộ server.</div>
+      <div class="page-sub">Dùng được với mọi vai trò. Chỉ thấy ghi chú của <strong id="notes-user-label">@…</strong> — được tự động đồng bộ hóa trên Google Sheets.</div>
 
       <div class="notes-toolbar">
         <input type="search" class="notes-search" id="notes-search" placeholder="Tìm trong ghi chú…" autocomplete="off" oninput="renderPersonalNotesList()">
@@ -9475,6 +9475,16 @@ async function sendChatMsg() {
 // Poll mỗi 3 giây — chỉ fetch delta (since=lastTs), bị khóa trong lúc load history
 async function chatPoll() {
   if (!AUTH.currentUser) return;
+
+  // Đồng bộ ghi chú cá nhân tức thời (mỗi 3 giây) khi đang xem trang Ghi chú hoặc mở Popup ghi chú
+  try {
+    const isViewingNotes = (typeof activePage !== 'undefined' && activePage === 'notes') || 
+                           (document.getElementById('notes-popup')?.classList.contains('open'));
+    if (isViewingNotes && typeof syncPersonalNotes === 'function') {
+      syncPersonalNotes();
+    }
+  } catch(e) {}
+
   if (chatPollLock) return; // đang load full history, không poll
   try {
     const since = chatHistoryLoaded ? chatLastTs : 0;
