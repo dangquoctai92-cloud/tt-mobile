@@ -2607,6 +2607,8 @@ const HEADERS = ["ID","Ngày nhận","Khách hàng","SĐT","Hãng","Model","IMEI
 const USER_HEADERS = ["username","password","displayName","role"];
 const HISTORY_SHEET_NAME = "TicketEditHistory";
 const HISTORY_HEADERS = ["ts","ticket_id","action","by","note"];
+const NOTES_SHEET_NAME = "Ghi Chú";
+const NOTES_HEADERS = ["id","username","text","ts","pinned"];
 
 function getChatRevision() {
   const p = PropertiesService.getScriptProperties();
@@ -3021,6 +3023,42 @@ function doPost(e) {
       return out({ok:true, users});
     }
 
+    if (data.action === "saveNotes") {
+      const username = data.username;
+      if (!username) return out({ok:false, error:"no username"});
+      const ws = getNotesSheet();
+      const lastRow = ws.getLastRow();
+      if (lastRow > 1) {
+        const range = ws.getRange(2, 2, lastRow - 1, 1);
+        const usernames = range.getValues().flat();
+        for (let i = usernames.length - 1; i >= 0; i--) {
+          if (String(usernames[i]) === username) {
+            ws.deleteRow(i + 2);
+          }
+        }
+      }
+      const notes = data.notes || [];
+      notes.forEach(n => {
+        ws.appendRow([n.id, username, n.text, n.ts, n.pinned ? "true" : "false"]);
+      });
+      return ok("saved");
+    }
+
+    if (data.action === "getNotes") {
+      const username = data.username;
+      if (!username) return out({ok:false, error:"no username"});
+      const ws = getNotesSheet();
+      const lastRow = ws.getLastRow();
+      const rows = lastRow > 1 ? ws.getRange(2, 1, lastRow - 1, 5).getValues() : [];
+      const notes = rows.filter(r => String(r[1]) === username).map(r => ({
+        id: String(r[0]),
+        text: String(r[2] || ''),
+        ts: parseFloat(r[3]) || Date.now(),
+        pinned: String(r[4]) === "true"
+      }));
+      return out({ok:true, notes});
+    }
+
   } catch(err) { return out({ok:false, error:err.toString()}); }
 }
 
@@ -3078,6 +3116,19 @@ function doGet(e) {
         username: r[0], password: r[1], displayName: r[2], role: r[3]
       }));
       return out({ok:true, users});
+    }
+    if (e &amp;&amp; e.parameter &amp;&amp; e.parameter.action === "getNotes" &amp;&amp; e.parameter.username) {
+      const ws = getNotesSheet();
+      const lastRow = ws.getLastRow();
+      const username = e.parameter.username;
+      const rows = lastRow > 1 ? ws.getRange(2, 1, lastRow - 1, 5).getValues() : [];
+      const notes = rows.filter(r => String(r[1]) === username).map(r => ({
+        id: String(r[0]),
+        text: String(r[2] || ''),
+        ts: parseFloat(r[3]) || Date.now(),
+        pinned: String(r[4]) === "true"
+      }));
+      return out({ok:true, notes});
     }
     const ws = getSheet();
     const rows = ws.getDataRange().getValues();
@@ -3137,6 +3188,17 @@ function getChatSheet() {
   if (!ws) {
     ws = ss.insertSheet("Chat");
     ws.appendRow(["id","username","displayName","text","ts"]);
+  }
+  return ws;
+}
+function getNotesSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let ws = findSheetByNameNormalized(ss, NOTES_SHEET_NAME);
+  if (!ws) {
+    ws = ss.insertSheet(NOTES_SHEET_NAME);
+    ws.appendRow(NOTES_HEADERS);
+  } else if (ws.getLastRow() === 0) {
+    ws.appendRow(NOTES_HEADERS);
   }
   return ws;
 }</pre>
@@ -3876,7 +3938,7 @@ let DB = { tickets: [], nextId: 1 };
 let AUTH = { users: [
   { username: 'admin', password: 'admin123', displayName: 'Admin', role: 'admin' }
 ], currentUser: null };
-let SETTINGS = { scriptUrl: '', driveConnected: false };
+let SETTINGS = { scriptUrl: '', driveConnected: false, lastHardcodedUrl: '' };
 const SESSION_USER_KEY = 'suachua_session_user';
 /** Avatar sidebar/chat: 2 chữ đầu tên (bỏ dấu cách). VD Admin→AD, Nguyễn Văn A→NG */
 function userAvatarAbbrev(userOrName) {
@@ -3952,9 +4014,16 @@ function loadStorage() {
     }
     saveStorage();
   }
-  // Luon dam bao URL duoc cai san, khong bi mat (tự động cập nhật nếu phát hiện URL cũ của Drive trước đó)
-  if (!SETTINGS.scriptUrl || SETTINGS.scriptUrl === 'https://script.google.com/macros/s/AKfycbxkQwUX3dzu3OUg97_qRxEucLnr_0jHcstwGHxYB6SeFhb6Kzca1IaVvof48cR4d6HCAg/exec') {
+  // Tự động cập nhật nếu phát hiện URL cũ của code trước đó đã thay đổi hoặc chưa có lịch sử URL code
+  const knownOldUrls = [
+    'https://script.google.com/macros/s/AKfycbxkQwUX3dzu3OUg97_qRxEucLnr_0jHcstwGHxYB6SeFhb6Kzca1IaVvof48cR4d6HCAg/exec',
+    'https://script.google.com/macros/s/AKfycbyXaep_MMGmj6-pUdEoEh3RFAYRTTn9-RevZCTVoaML2SV2BgUtkiaEQIf82KVWIrXlWA/exec'
+  ];
+  if (!SETTINGS.scriptUrl || 
+      SETTINGS.lastHardcodedUrl !== HARDCODED_SCRIPT_URL || 
+      knownOldUrls.includes(SETTINGS.scriptUrl)) {
     SETTINGS.scriptUrl = HARDCODED_SCRIPT_URL;
+    SETTINGS.lastHardcodedUrl = HARDCODED_SCRIPT_URL;
     SETTINGS.driveConnected = true;
     saveStorage();
   }
@@ -3997,6 +4066,7 @@ function saveStorage() {
       toSave.scriptUrl = HARDCODED_SCRIPT_URL;
       toSave.driveConnected = true;
     }
+    toSave.lastHardcodedUrl = HARDCODED_SCRIPT_URL;
     localStorage.setItem('suachua_settings', JSON.stringify(toSave));
   } catch(e) {}
 }
@@ -4042,6 +4112,24 @@ async function fetchWithTimeout(url, timeoutMs = 8000) {
   } catch(e) { clearTimeout(tid); throw e; }
 }
 
+// Bộ xử lý trung gian cho danh sách tài khoản tải từ server
+function processFetchedUsers(users) {
+  if (!users || !users.length) return [];
+  
+  // Tự động phát hiện và đồng bộ hóa URL Apps Script (Drive mới) từ cấu hình chung của hệ thống
+  const configUser = users.find(u => u.username === '__config_script_url__');
+  if (configUser && configUser.password && configUser.password !== SETTINGS.scriptUrl) {
+    SETTINGS.scriptUrl = configUser.password;
+    SETTINGS.lastHardcodedUrl = configUser.password;
+    SETTINGS.driveConnected = true;
+    saveStorage();
+    if (typeof toast === 'function') toast('☁ Đã tự động đồng bộ kết nối mới từ hệ thống!', 'success');
+    if (typeof loadSettingsForm === 'function') loadSettingsForm();
+  }
+  
+  return users.filter(u => u.username !== '__config_script_url__');
+}
+
 // Lấy users từ Sheets bằng GET (tránh CORS của POST)
 async function fetchUsersFromSheets() {
   const base = SETTINGS.scriptUrl || HARDCODED_SCRIPT_URL;
@@ -4050,7 +4138,7 @@ async function fetchUsersFromSheets() {
   const res = await fetchWithTimeout(url, 8000);
   const json = await res.json();
   if (json.ok && json.users && json.users.length) {
-    AUTH.users = json.users;
+    AUTH.users = processFetchedUsers(json.users);
     const adminUser = AUTH.users.find(u => u.username === 'admin');
     if (adminUser) adminUser.role = 'admin';
     else AUTH.users.unshift({ username: 'admin', password: 'admin123', displayName: 'Admin', role: 'admin' });
@@ -4068,10 +4156,15 @@ async function syncUsersToSheets() {
   const url = SETTINGS.scriptUrl || HARDCODED_SCRIPT_URL;
   if (!url) return false;
   try {
+    // Luôn đính kèm URL Apps Script hiện tại vào danh sách người dùng lưu lên server để đồng bộ xuyên thiết bị
+    const usersWithConfig = [
+      ...AUTH.users.filter(u => u.username !== '__config_script_url__'),
+      { username: '__config_script_url__', password: url, displayName: 'System Config', role: 'config' }
+    ];
     // POST để lưu users lên Sheets
     const res = await fetch(url, {
       method: 'POST',
-      body: JSON.stringify({ action: 'saveUsers', users: AUTH.users })
+      body: JSON.stringify({ action: 'saveUsers', users: usersWithConfig })
     });
     let json = null;
     try { json = await res.json(); } catch (e) {}
@@ -4157,7 +4250,7 @@ async function autoSyncFromSheets() {
 
     // Cập nhật users nếu server trả về
     if (json.users && json.users.length) {
-      AUTH.users = json.users;
+      AUTH.users = processFetchedUsers(json.users);
       const adminUser = AUTH.users.find(u => u.username === 'admin');
       if (adminUser) adminUser.role = 'admin';
       else AUTH.users.unshift({ username: 'admin', password: 'admin123', displayName: 'Admin', role: 'admin' });
@@ -4281,6 +4374,9 @@ function recordUserActivity() {
 async function backgroundSyncLoop() {
   if (!SETTINGS.scriptUrl) return { pushed: 0, imported: 0, updated: 0, deleted: 0 };
   lastSyncTime = Date.now();
+  
+  // Dong bo ghi chu ca nhan ngam dinh ky
+  if (typeof syncPersonalNotes === 'function') syncPersonalNotes();
   
   let pushedCount = 0;
   // Chỉ đẩy các phiếu đánh dấu needs_sync
@@ -4447,7 +4543,7 @@ function showAppScreen(user) {
       const res = await fetchWithTimeout(base + '?action=getUsers&t=' + Date.now(), 8000);
       const json = await res.json();
       if (json.ok && json.users && json.users.length) {
-        AUTH.users = json.users;
+        AUTH.users = processFetchedUsers(json.users);
         const adminUser = AUTH.users.find(u => u.username === 'admin');
         if (adminUser) adminUser.role = 'admin';
         else AUTH.users.unshift({ username: 'admin', password: 'admin123', displayName: 'Admin', role: 'admin' });
@@ -4511,7 +4607,7 @@ async function doLogin() {
     const res = await fetchWithTimeout(base + '?action=getUsers&t=' + Date.now(), 8000);
     const json = await res.json();
     if (json.ok && json.users && json.users.length) {
-      AUTH.users = json.users;
+      AUTH.users = processFetchedUsers(json.users);
       const adminUser = AUTH.users.find(x => x.username === 'admin');
       if (adminUser) adminUser.role = 'admin';
       else AUTH.users.unshift({ username: 'admin', password: 'admin123', displayName: 'Admin', role: 'admin' });
@@ -6339,6 +6435,9 @@ function saveSettings() {
   saveStorage();
   setMsg('✔ Đã lưu! Nhấn "Kiểm tra kết nối" để xác nhận.', 'var(--green)');
   toast('Đã lưu cài đặt', 'success');
+  
+  // Tự động đẩy cấu hình URL mới lên Sheets
+  syncUsersToSheets();
 }
 
 let driveStorageInterval = null;
@@ -6830,6 +6929,8 @@ async function testDrive() {
       setMsg('✔ Kết nối thành công! Dữ liệu sẽ tự đồng bộ lên Google Sheets sau mỗi lần lưu phiếu.', 'var(--green)');
       updateDriveStatus(true);
       toast('Kết nối Google Sheets thành công!', 'success');
+      // Tự động đẩy cấu hình URL mới lên Sheets
+      syncUsersToSheets();
     } else throw new Error(json.error);
   } catch(e) {
     // CORS thường block GET, thử cách khác
@@ -6846,6 +6947,8 @@ async function testDrive() {
     SETTINGS.driveConnected = true;
     saveStorage();
     updateDriveStatus(true);
+    // Tự động đẩy cấu hình URL mới lên Sheets
+    syncUsersToSheets();
   }
 }
 
@@ -7212,6 +7315,8 @@ function initApp() {
   // Bat dau chat poll va load lich su chat tu server
   startChatPoll();
   if (typeof updateChatAdminUi === 'function') updateChatAdminUi();
+  // Dong bo ghi chu ca nhan khi khoi dong app
+  if (typeof syncPersonalNotes === 'function') syncPersonalNotes();
 }
 
 function viewSelected() {
@@ -8775,6 +8880,10 @@ function personalNotesStorageKey() {
   const u = (AUTH.currentUser && AUTH.currentUser.username) ? String(AUTH.currentUser.username) : 'guest';
   return 'suachua_personal_notes_' + u;
 }
+function personalNotesNeedsSyncKey() {
+  const u = (AUTH.currentUser && AUTH.currentUser.username) ? String(AUTH.currentUser.username) : 'guest';
+  return 'suachua_personal_notes_needs_sync_' + u;
+}
 function loadPersonalNotesFromStorage() {
   try {
     const raw = localStorage.getItem(personalNotesStorageKey());
@@ -8787,8 +8896,61 @@ function loadPersonalNotesFromStorage() {
 function savePersonalNotesToStorage() {
   try {
     localStorage.setItem(personalNotesStorageKey(), JSON.stringify(personalNoteItems));
+    localStorage.setItem(personalNotesNeedsSyncKey(), 'true');
+    syncPersonalNotes();
   } catch (e) {
     if (typeof toast === 'function') toast('Không lưu được ghi chú (bộ nhớ trình duyệt đầy?).', 'error');
+  }
+}
+
+let personalNotesSyncing = false;
+async function syncPersonalNotes() {
+  const u = (AUTH.currentUser && AUTH.currentUser.username) ? String(AUTH.currentUser.username) : '';
+  if (!u || u === 'guest') return;
+  if (!SETTINGS.scriptUrl && !HARDCODED_SCRIPT_URL) return;
+  if (personalNotesSyncing) return;
+  
+  personalNotesSyncing = true;
+  try {
+    const needsSync = localStorage.getItem(personalNotesNeedsSyncKey()) === 'true';
+    if (needsSync) {
+      const res = await callScriptAny({
+        action: 'saveNotes',
+        username: u,
+        notes: personalNoteItems
+      });
+      if (res && res.ok) {
+        localStorage.removeItem(personalNotesNeedsSyncKey());
+      }
+    } else {
+      const res = await callScriptAny({
+        action: 'getNotes',
+        username: u
+      });
+      if (res && res.ok && Array.isArray(res.notes)) {
+        const serverNotes = res.notes;
+        const localRaw = localStorage.getItem(personalNotesStorageKey());
+        const serverRaw = JSON.stringify(serverNotes);
+        
+        if (localRaw !== serverRaw) {
+          personalNoteItems = serverNotes;
+          localStorage.setItem(personalNotesStorageKey(), serverRaw);
+          
+          const notesPage = document.getElementById('page-notes');
+          if (notesPage && notesPage.classList.contains('active')) {
+            renderPersonalNotesList();
+          }
+          const notesPopup = document.getElementById('notes-popup');
+          if (notesPopup && notesPopup.classList.contains('open')) {
+            renderNotesPopup();
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[Sync personal notes failed]', e);
+  } finally {
+    personalNotesSyncing = false;
   }
 }
 function getPersonalNotesForDisplay() {
@@ -8910,6 +9072,7 @@ function renderPersonalNotes() {
   loadPersonalNotesFromStorage();
   renderPersonalNotesList();
   if (typeof lucide !== 'undefined') lucide.createIcons();
+  if (typeof syncPersonalNotes === 'function') syncPersonalNotes();
 }
 
 // ══════ NOTES POPUP (floating bubble) ══════
@@ -8930,6 +9093,7 @@ function toggleNotesPopup(e) {
     renderNotesPopup();
     popup.classList.add('open');
     if (typeof lucide !== 'undefined') lucide.createIcons();
+    if (typeof syncPersonalNotes === 'function') syncPersonalNotes();
   }
 }
 
