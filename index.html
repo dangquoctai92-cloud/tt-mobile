@@ -4186,6 +4186,23 @@ async function syncUsersToSheets() {
   }
 }
 
+// Báo cho sheet cũ biết URL mới để các thiết bị khác đang dùng sheet cũ có thể tự động chuyển sang sheet mới
+async function writeNewUrlToOldSheet(oldUrl, newUrl) {
+  if (!oldUrl || !newUrl || oldUrl === newUrl) return;
+  try {
+    const usersWithConfig = [
+      ...AUTH.users.filter(u => u.username !== '__config_script_url__'),
+      { username: '__config_script_url__', password: newUrl, displayName: 'System Config', role: 'config' }
+    ];
+    await fetch(oldUrl, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'saveUsers', users: usersWithConfig })
+    });
+  } catch(e) {
+    console.warn('[Sync to old sheet failed]', e);
+  }
+}
+
 // ══════ AUTO PULL TU SHEETS KHI DANG NHAP ══════
 function parseSheetDate(val) {
   if (!val) return '';
@@ -6433,6 +6450,13 @@ function loadSettingsForm() {
 }
 function saveSettings() {
   const url = document.getElementById('cfg-script-url').value.trim();
+  const oldUrl = SETTINGS.scriptUrl;
+
+  // Báo cho sheet cũ biết URL mới trước khi chuyển đổi
+  if (oldUrl && url && oldUrl !== url) {
+    writeNewUrlToOldSheet(oldUrl, url);
+  }
+
   SETTINGS.scriptUrl = url;
   if (url && !SETTINGS.driveConnected) SETTINGS.driveConnected = false;
   
@@ -6444,7 +6468,7 @@ function saveSettings() {
   setMsg('✔ Đã lưu! Nhấn "Kiểm tra kết nối" để xác nhận.', 'var(--green)');
   toast('Đã lưu cài đặt', 'success');
   
-  // Tự động đẩy cấu hình URL mới lên Sheets
+  // Tự động đẩy cấu hình URL mới lên Sheets mới
   syncUsersToSheets();
 }
 
@@ -6870,6 +6894,8 @@ async function callScriptAny(payload) {
   if (!url) throw new Error('Chưa có Apps Script URL');
   const res = await fetch(url, {
     method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    redirect: 'follow',
     body: JSON.stringify(payload || {})
   });
   return await res.json();
@@ -6926,6 +6952,13 @@ async function testDrive() {
     setMsg('✘ URL không hợp lệ! Phải là URL từ Google Apps Script (script.google.com/macros/s/.../exec)', 'var(--red)');
     return;
   }
+  const oldUrl = SETTINGS.scriptUrl;
+
+  // Báo cho sheet cũ biết URL mới trước khi chuyển đổi
+  if (oldUrl && url && oldUrl !== url) {
+    writeNewUrlToOldSheet(oldUrl, url);
+  }
+
   SETTINGS.scriptUrl = url;
   setMsg('⏳ Đang kết nối tới Google Sheets...', 'var(--yellow)');
   try {
