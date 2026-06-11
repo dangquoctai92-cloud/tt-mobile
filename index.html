@@ -8958,19 +8958,25 @@ async function syncPersonalNotes() {
   try {
     const needsSync = localStorage.getItem(personalNotesNeedsSyncKey()) === 'true';
     if (needsSync) {
+      const localRawAtStart = localStorage.getItem(personalNotesStorageKey());
       const res = await callScriptAny({
         action: 'saveNotes',
         username: u,
-        notes: personalNoteItems
+        notes: JSON.parse(localRawAtStart || '[]')
       });
       if (res && res.ok) {
-        localStorage.removeItem(personalNotesNeedsSyncKey());
+        if (localStorage.getItem(personalNotesStorageKey()) === localRawAtStart) {
+          localStorage.removeItem(personalNotesNeedsSyncKey());
+        }
       }
     } else {
       const res = await callScriptAny({
         action: 'getNotes',
         username: u
       });
+      if (localStorage.getItem(personalNotesNeedsSyncKey()) === 'true') {
+        return;
+      }
       if (res && res.ok && Array.isArray(res.notes)) {
         const serverNotes = res.notes;
         const localRaw = localStorage.getItem(personalNotesStorageKey());
