@@ -4325,9 +4325,11 @@ async function autoSyncFromSheets() {
       setTimeout(() => { currentDelQ.forEach(id => deleteFromSheets(id)); }, 3000);
     }
 
+    const seenIds = new Set();
     json.rows.slice(1).forEach(r => {
       const id = parseInt(r[0]);
-      if (!id) return;
+      if (!id || seenIds.has(id)) return;
+      seenIds.add(id);
       const idx = DB.tickets.findIndex(t => t.id === id);
       const existingTicket = idx !== -1 ? DB.tickets[idx] : null;
       const ticketFromSheet = {
@@ -7043,9 +7045,11 @@ async function pullFromSheets() {
     const currentDelQ = getDeletedQueue();
     const filteredRows = rows.filter((r, i) => i === 0 || (!currentDelQ.includes(parseInt(r[0])) && String(r[15] || '').trim() !== '__DELETED__'));
 
+    const seenIds = new Set();
     filteredRows.slice(1).forEach(r => {
       const id = parseInt(r[0]);
-      if (!id) return;
+      if (!id || seenIds.has(id)) return;
+      seenIds.add(id);
       const idx = DB.tickets.findIndex(t => t.id === id);
       const existingTicket = idx !== -1 ? DB.tickets[idx] : null;
       const ticketFromSheet = {
