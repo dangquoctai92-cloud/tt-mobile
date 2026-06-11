@@ -4785,8 +4785,8 @@ function selectChoice(type) {
   showForm(null, false, type);
 }
 function calcSaleProfit() {
-  const total = parseInt(document.getElementById('fs-total').value) || 0;
-  const parts = parseInt(document.getElementById('fs-parts').value) || 0;
+  const total = parseInt(document.getElementById('fs-total').value.replace(/\D/g, ''), 10) || 0;
+  const parts = parseInt(document.getElementById('fs-parts').value.replace(/\D/g, ''), 10) || 0;
   const profitField = document.getElementById('fs-profit');
   if (profitField) profitField.value = (total - parts).toLocaleString('vi-VN');
 }
@@ -5731,8 +5731,8 @@ function closeForm() {
   document.getElementById('form-modal').classList.remove('open');
 }
 function calcProfit() {
-  const t = parseInt(document.getElementById('f-total').value) || 0;
-  const p = parseInt(document.getElementById('f-parts').value) || 0;
+  const t = parseInt(document.getElementById('f-total').value.replace(/\D/g, ''), 10) || 0;
+  const p = parseInt(document.getElementById('f-parts').value.replace(/\D/g, ''), 10) || 0;
   document.getElementById('f-profit').value = (t - p).toLocaleString('vi-VN');
 }
 function onStatusChange(val) {
@@ -5824,8 +5824,8 @@ async function saveTicket() {
     customer = document.getElementById('fs-customer').value.trim();
     if (!customer) { toast('Vui lòng nhập tên khách hàng!', 'error'); _savingTicket = false; if (saveBtn) { saveBtn.disabled = false; saveBtn.style.opacity = '1'; saveBtn.style.pointerEvents = 'auto'; } return; }
     
-    const total = parseInt(document.getElementById('fs-total').value) || 0;
-    const parts_cost = parseInt(document.getElementById('fs-parts').value) || 0;
+    const total = parseInt(document.getElementById('fs-total').value.replace(/\D/g, ''), 10) || 0;
+    const parts_cost = parseInt(document.getElementById('fs-parts').value.replace(/\D/g, ''), 10) || 0;
     
     ticketData = {
       ticket_type: 'sale',
@@ -5853,8 +5853,8 @@ async function saveTicket() {
     customer = document.getElementById('f-customer').value.trim();
     if (!customer) { toast('Vui lòng nhập tên khách hàng!', 'error'); _savingTicket = false; if (saveBtn) { saveBtn.disabled = false; saveBtn.style.opacity = '1'; saveBtn.style.pointerEvents = 'auto'; } return; }
     
-    const total = parseInt(document.getElementById('f-total').value) || 0;
-    const parts_cost = parseInt(document.getElementById('f-parts').value) || 0;
+    const total = parseInt(document.getElementById('f-total').value.replace(/\D/g, ''), 10) || 0;
+    const parts_cost = parseInt(document.getElementById('f-parts').value.replace(/\D/g, ''), 10) || 0;
     
     ticketData = {
       ticket_type: 'repair',
@@ -6381,8 +6381,8 @@ function printCurrentTicket() {
     tempT.machine_condition = getVal('f-condition') ?? tempT.machine_condition;
     tempT.diagnosis = getVal('f-diagnosis') ?? tempT.diagnosis;
     tempT.repair_method = getVal('f-repair-method') ?? tempT.repair_method;
-    const total = parseInt(getVal('f-total'), 10) || 0;
-    const parts = parseInt(getVal('f-parts'), 10) || 0;
+    const total = parseInt(String(getVal('f-total') || '').replace(/\D/g, ''), 10) || 0;
+    const parts = parseInt(String(getVal('f-parts') || '').replace(/\D/g, ''), 10) || 0;
     tempT.total = total;
     tempT.parts_cost = parts;
     tempT.labor_cost = total - parts;
