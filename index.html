@@ -3642,11 +3642,11 @@ function getNotesSheet() {
               <div id="cost-money-row" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
                 <div class="field">
                   <label>Thu khách (VNĐ)</label>
-                  <input type="number" id="f-total" oninput="calcProfit()" style="padding:7px 10px">
+                  <input type="text" inputmode="numeric" id="f-total" oninput="formatVNDInput(this); calcProfit()" style="padding:7px 10px">
                 </div>
                 <div class="field">
                   <label>Tiền linh kiện (VNĐ)</label>
-                  <input type="number" id="f-parts" oninput="calcProfit()" style="padding:7px 10px">
+                  <input type="text" inputmode="numeric" id="f-parts" oninput="formatVNDInput(this); calcProfit()" style="padding:7px 10px">
                 </div>
               </div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
@@ -3743,11 +3743,11 @@ function getNotesSheet() {
               <div id="fs-cost-row" style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
                 <div class="field">
                   <label>Giá nhập máy (VNĐ) *</label>
-                  <input type="number" id="fs-parts" oninput="calcSaleProfit()" style="padding:7px 10px;">
+                  <input type="text" inputmode="numeric" id="fs-parts" oninput="formatVNDInput(this); calcSaleProfit()" style="padding:7px 10px;">
                 </div>
                 <div class="field">
                   <label>Giá bán máy (VNĐ) *</label>
-                  <input type="number" id="fs-total" oninput="calcSaleProfit()" style="padding:7px 10px;">
+                  <input type="text" inputmode="numeric" id="fs-total" oninput="formatVNDInput(this); calcSaleProfit()" style="padding:7px 10px;">
                 </div>
               </div>
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
@@ -4270,7 +4270,9 @@ function removeDeletedQueue(id) {
 }
 
 
+let _syncLocked = false;
 async function autoSyncFromSheets() {
+  if (_syncLocked || _savingTicket) return null; // Không sync trong khi đang save phiếu
   if (!SETTINGS.scriptUrl && !HARDCODED_SCRIPT_URL) return null;
   try {
     const json = await fetchSheetsSnapshot();
@@ -4357,7 +4359,11 @@ async function autoSyncFromSheets() {
         payment_method: r[25] !== undefined ? String(r[25]).trim() : (existingTicket ? (existingTicket.payment_method || '') : ''),
       };
       if (idx === -1) { DB.tickets.unshift(ticketFromSheet); if (id >= DB.nextId) DB.nextId = id + 1; imported++; }
-      else { DB.tickets[idx] = { ...DB.tickets[idx], ...ticketFromSheet }; updated++; }
+      else {
+        // KHÔNG ghi đè phiếu đang chờ sync (needs_sync) hoặc mới cập nhật local
+        if (DB.tickets[idx].needs_sync || (Date.now() - (DB.tickets[idx].local_updated_at || 0) < 60000)) { return; }
+        DB.tickets[idx] = { ...DB.tickets[idx], ...ticketFromSheet }; updated++;
+      }
     });
     // Tính serverIds từ serverRows gốc (chưa filter) để maxServerId không bị lùi lại khi xóa phiếu mới nhất
     const allServerIds = new Set(serverRows.map(r => parseInt(r[0])).filter(Boolean));
@@ -4369,7 +4375,8 @@ async function autoSyncFromSheets() {
     const oldLen = DB.tickets.length;
     // Xóa những phiếu không còn trên server hoặc đã bị filter out, NHƯNG giữ lại phiếu mới tạo ở local chưa push (t.id > maxServerId)
     // Cần phải chắc chắn phiếu đó không nằm trong delQ thì mới giữ lại (phòng hờ)
-    DB.tickets = DB.tickets.filter(t => validServerIds.has(t.id) || (t.id > maxServerId && !currentDelQ.includes(t.id)));
+    // Cũng giữ lại phiếu có needs_sync (đang chờ push lên server)
+    DB.tickets = DB.tickets.filter(t => validServerIds.has(t.id) || t.needs_sync || (t.id > maxServerId && !currentDelQ.includes(t.id)));
     const deletedLocally = oldLen - DB.tickets.length;
 
     DB.tickets.sort((a, b) => b.id - a.id);
@@ -4400,6 +4407,7 @@ function recordUserActivity() {
 });
 
 async function backgroundSyncLoop() {
+  if (_syncLocked || _savingTicket) return { pushed: 0, imported: 0, updated: 0, deleted: 0 }; // Không chạy khi đang save phiếu
   if (!SETTINGS.scriptUrl) return { pushed: 0, imported: 0, updated: 0, deleted: 0 };
   lastSyncTime = Date.now();
   
@@ -5676,8 +5684,8 @@ function showForm(ticketId = null, readonly = false, type = 'repair') {
       document.getElementById('fs-model').value = t.model || '';
       document.getElementById('fs-imei').value = normalizeTextField(t.imei);
       document.getElementById('fs-condition').value = t.machine_condition || 'Mới 100% (Fullbox)';
-      document.getElementById('fs-parts').value = t.parts_cost || '';
-      document.getElementById('fs-total').value = t.total || '';
+      document.getElementById('fs-parts').value = t.parts_cost ? t.parts_cost.toLocaleString('vi-VN') : '';
+      document.getElementById('fs-total').value = t.total ? t.total.toLocaleString('vi-VN') : '';
       document.getElementById('fs-warranty').value = t.notes_warranty || 'Bảo hành 1 tháng';
       document.getElementById('fs-payment-method').value = t.payment_method || 'Tiền mặt';
       document.getElementById('fs-status').value = t.status || 'Đã thanh toán';
@@ -5697,8 +5705,8 @@ function showForm(ticketId = null, readonly = false, type = 'repair') {
       document.getElementById('f-condition').value = t.machine_condition || '';
       document.getElementById('f-diagnosis').value = t.diagnosis || '';
       document.getElementById('f-repair-method').value = t.repair_method || '';
-      document.getElementById('f-total').value = t.total || '';
-      document.getElementById('f-parts').value = t.parts_cost || '';
+      document.getElementById('f-total').value = t.total ? t.total.toLocaleString('vi-VN') : '';
+      document.getElementById('f-parts').value = t.parts_cost ? t.parts_cost.toLocaleString('vi-VN') : '';
       document.getElementById('f-status').value = t.status || 'Đang sửa';
       document.getElementById('f-return-date').value = normalizeDateForInput(t.date_returned);
       document.getElementById('f-notes').value = t.notes || '';
@@ -5729,6 +5737,14 @@ function showForm(ticketId = null, readonly = false, type = 'repair') {
 
 function closeForm() {
   document.getElementById('form-modal').classList.remove('open');
+}
+function formatVNDInput(input) {
+  let val = input.value.replace(/\D/g, '');
+  if (!val) {
+    input.value = '';
+    return;
+  }
+  input.value = parseInt(val, 10).toLocaleString('vi-VN');
 }
 function calcProfit() {
   const t = parseInt(document.getElementById('f-total').value.replace(/\D/g, ''), 10) || 0;
@@ -5811,6 +5827,7 @@ let _savingTicket = false;
 async function saveTicket() {
   if (_savingTicket) return;
   _savingTicket = true;
+  _syncLocked = true; // Chặn background sync trong khi đang save
   // Disable nút lưu tránh bấm nhiều lần
   const saveBtn = document.querySelector('.modal-footer .btn-green');
   if (saveBtn) { saveBtn.disabled = true; saveBtn.style.opacity = '0.6'; saveBtn.style.pointerEvents = 'none'; }
@@ -5822,7 +5839,7 @@ async function saveTicket() {
   
   if (isSale) {
     customer = document.getElementById('fs-customer').value.trim();
-    if (!customer) { toast('Vui lòng nhập tên khách hàng!', 'error'); _savingTicket = false; if (saveBtn) { saveBtn.disabled = false; saveBtn.style.opacity = '1'; saveBtn.style.pointerEvents = 'auto'; } return; }
+    if (!customer) { toast('Vui lòng nhập tên khách hàng!', 'error'); _savingTicket = false; _syncLocked = false; if (saveBtn) { saveBtn.disabled = false; saveBtn.style.opacity = '1'; saveBtn.style.pointerEvents = 'auto'; } return; }
     
     const total = parseInt(document.getElementById('fs-total').value.replace(/\D/g, ''), 10) || 0;
     const parts_cost = parseInt(document.getElementById('fs-parts').value.replace(/\D/g, ''), 10) || 0;
@@ -5851,10 +5868,13 @@ async function saveTicket() {
     };
   } else {
     customer = document.getElementById('f-customer').value.trim();
-    if (!customer) { toast('Vui lòng nhập tên khách hàng!', 'error'); _savingTicket = false; if (saveBtn) { saveBtn.disabled = false; saveBtn.style.opacity = '1'; saveBtn.style.pointerEvents = 'auto'; } return; }
+    if (!customer) { toast('Vui lòng nhập tên khách hàng!', 'error'); _savingTicket = false; _syncLocked = false; if (saveBtn) { saveBtn.disabled = false; saveBtn.style.opacity = '1'; saveBtn.style.pointerEvents = 'auto'; } return; }
     
-    const total = parseInt(document.getElementById('f-total').value.replace(/\D/g, ''), 10) || 0;
+    const totalRaw = document.getElementById('f-total').value;
+    const total = parseInt(totalRaw.replace(/\D/g, ''), 10) || 0;
     const parts_cost = parseInt(document.getElementById('f-parts').value.replace(/\D/g, ''), 10) || 0;
+    
+    // Debug removed
     
     ticketData = {
       ticket_type: 'repair',
@@ -5902,11 +5922,11 @@ async function saveTicket() {
   if (editingTicketId) {
     const idx = DB.tickets.findIndex(t => String(t.id) === String(editingTicketId));
     if (idx !== -1) {
-      DB.tickets[idx] = { ...DB.tickets[idx], ...ticketData, needs_sync: true };
+      DB.tickets[idx] = { ...DB.tickets[idx], ...ticketData, needs_sync: true, local_updated_at: Date.now() };
       savedTicket = DB.tickets[idx];
     }
   } else {
-    savedTicket = { id: DB.nextId++, date_received: now, created_by: AUTH.currentUser?.username || '', ...ticketData, needs_sync: true };
+    savedTicket = { id: DB.nextId++, date_received: now, created_by: AUTH.currentUser?.username || '', ...ticketData, needs_sync: true, local_updated_at: Date.now() };
     DB.tickets.unshift(savedTicket);
     editingTicketId = savedTicket.id; // Chuyển form sang chế độ sửa phiếu
     
@@ -5983,6 +6003,7 @@ async function saveTicket() {
   }
   } finally {
     _savingTicket = false;
+    _syncLocked = false; // Mở lại background sync
     const saveBtn = document.querySelector('.modal-footer .btn-green');
     if (saveBtn) { saveBtn.disabled = false; saveBtn.style.opacity = ''; saveBtn.style.pointerEvents = ''; }
   }
@@ -7043,7 +7064,11 @@ async function pullFromSheets() {
         payment_method: r[25] !== undefined ? String(r[25]).trim() : (existingTicket ? (existingTicket.payment_method || '') : ''),
       };
       if (idx === -1) { DB.tickets.unshift(ticketFromSheet); if (id >= DB.nextId) DB.nextId = id + 1; imported++; }
-      else { DB.tickets[idx] = { ...DB.tickets[idx], ...ticketFromSheet }; updated++; }
+      else {
+        // KHÔNG ghi đè phiếu đang chờ sync (needs_sync) hoặc mới cập nhật local
+        if (DB.tickets[idx].needs_sync || (Date.now() - (DB.tickets[idx].local_updated_at || 0) < 60000)) { return; }
+        DB.tickets[idx] = { ...DB.tickets[idx], ...ticketFromSheet }; updated++;
+      }
     });
 
     const allServerIds = new Set(rows.slice(1).map(r => parseInt(r[0])).filter(Boolean));
@@ -7052,7 +7077,8 @@ async function pullFromSheets() {
     const validServerIds = new Set(filteredRows.slice(1).map(r => parseInt(r[0])).filter(Boolean));
     
     const oldLen = DB.tickets.length;
-    DB.tickets = DB.tickets.filter(t => validServerIds.has(t.id) || (t.id > maxServerId && !currentDelQ.includes(t.id)));
+    // Cũng giữ lại phiếu có needs_sync (đang chờ push lên server)
+    DB.tickets = DB.tickets.filter(t => validServerIds.has(t.id) || t.needs_sync || (t.id > maxServerId && !currentDelQ.includes(t.id)));
     const deletedLocally = oldLen - DB.tickets.length;
     saveStorage(); renderTable(DB.tickets);
     setMsg(`✔ Xong! Mới: ${imported} | Cập nhật: ${updated} | Xóa local: ${deletedLocally}`, 'var(--green)');
@@ -7790,6 +7816,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </div>
 
 <div class="chat-popup" id="chat-popup">
+  <div id="version-tag" style="position:fixed;top:0;right:0;z-index:9999;background:red;color:white;padding:2px 5px;font-size:10px;pointer-events:none;">v1.1</div>
   <!-- Header gradient -->
   <div class="chat-header">
     <div class="chat-header-avatar">💬</div>
@@ -10059,6 +10086,7 @@ if ('serviceWorker' in navigator) {
   });
 }
 </script>
+  <div id="version-tag" style="position:fixed;top:0;right:0;z-index:99999;background:red;color:white;padding:2px 5px;font-size:12px;font-weight:bold;pointer-events:none;">v1.2</div>
 </body>
 </html>
 
