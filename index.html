@@ -2648,6 +2648,15 @@ body.logged-in .chat-fab-wrap { display: block; }
           <b style="color:var(--text)">Bước 3:</b> Copy URL deploy dán vào ô bên dưới → Lưu & Kiểm tra
         </div>
 
+        <div class="field" id="pc-export-dir-field" style="display:none; margin-top: 15px;">
+          <label>Thư mục lưu Phiếu in (Chỉ dành cho Máy tính)</label>
+          <div style="display:flex; gap: 8px;">
+            <input type="text" id="export-dir-name" readonly placeholder="Mặc định (Tải qua trình duyệt)" style="flex: 1; background: #f5f5f5; cursor: not-allowed;">
+            <button type="button" class="btn" onclick="selectExportDirectory()" style="white-space: nowrap; padding: 0 12px;"><i data-lucide="folder-open" style="width:16px;height:16px"></i> Chọn</button>
+          </div>
+          <p style="font-size: 8pt; color: #888; margin-top: 5px;">Khi in phiếu, ảnh sẽ tự động được lưu thẳng vào thư mục này mà không cần hộp thoại xác nhận tải xuống của trình duyệt.</p>
+        </div>
+
         <!-- CODE APPS SCRIPT -->
         <div style="margin-bottom:18px">
           <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">
@@ -5315,6 +5324,68 @@ function clearImages(attr) {
   imgStore[attr] = [];
   refreshPreview(attr);
 }
+
+// ══════ CẤU HÌNH THƯ MỤC XUẤT PHIẾU (INDEXEDDB) ══════
+function openAppDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('TTMobileDB', 1);
+    request.onupgradeneeded = e => {
+      if (!e.target.result.objectStoreNames.contains('settings')) {
+        e.target.result.createObjectStore('settings');
+      }
+    };
+    request.onsuccess = e => resolve(e.target.result);
+    request.onerror = e => reject(e);
+  });
+}
+async function saveDirHandle(handle) {
+  try {
+    const db = await openAppDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('settings', 'readwrite');
+      tx.objectStore('settings').put(handle, 'exportDirHandle');
+      tx.oncomplete = () => resolve();
+      tx.onerror = e => reject(e);
+    });
+  } catch (e) { console.error('saveDirHandle error', e); }
+}
+async function getDirHandle() {
+  try {
+    const db = await openAppDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('settings', 'readonly');
+      const req = tx.objectStore('settings').get('exportDirHandle');
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = e => reject(e);
+    });
+  } catch (e) { return null; }
+}
+
+async function selectExportDirectory() {
+  try {
+    const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+    await saveDirHandle(handle);
+    const input = document.getElementById('export-dir-name');
+    if (input) input.value = handle.name;
+    toast('Đã lưu cấu hình thư mục xuất phiếu', 'success');
+  } catch (e) {
+    if (e.name !== 'AbortError') {
+      toast('Lỗi khi chọn thư mục: ' + e.message, 'error');
+    }
+  }
+}
+
+async function verifyDirPermission(handle) {
+  const options = { mode: 'readwrite' };
+  if ((await handle.queryPermission(options)) === 'granted') {
+    return true;
+  }
+  if ((await handle.requestPermission(options)) === 'granted') {
+    return true;
+  }
+  return false;
+}
+
 // Convert Drive URL sang dạng thumbnail có thể embed được
 function driveThumb(url) {
   if (!url) return '';
@@ -6548,33 +6619,58 @@ async function exportTicketAsImage(t) {
   });
 
   const fileName = `Phieu_SC_${t.id}.png`;
-  await new Promise(resolve => {
-    if (canvas.toBlob) {
-      canvas.toBlob(blob => {
-        if (blob) {
-          const a = document.createElement('a');
-          const url = URL.createObjectURL(blob);
-          a.href = url;
-          a.download = fileName;
-          a.click();
-          setTimeout(() => URL.revokeObjectURL(url), 10000);
-        } else {
-          // Fallback: toDataURL
-          const a = document.createElement('a');
-          a.href = canvas.toDataURL('image/png');
-          a.download = fileName;
-          a.click();
+  
+  // Custom Directory Save logic (PC only)
+  let customSaved = false;
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  if (!isMobile && window.showDirectoryPicker) {
+    try {
+      const handle = await getDirHandle();
+      if (handle) {
+        const hasPermission = await verifyDirPermission(handle);
+        if (hasPermission) {
+          const fileHandle = await handle.getFileHandle(fileName, { create: true });
+          const writable = await fileHandle.createWritable();
+          await new Promise(r => canvas.toBlob(blob => {
+            writable.write(blob).then(r).catch(e => { console.error(e); r(); });
+          }, 'image/png'));
+          await writable.close();
+          customSaved = true;
+          toast(`Đã lưu phiếu vào thư mục: ${handle.name}`, 'success');
         }
+      }
+    } catch (e) { console.error('Custom save error', e); }
+  }
+
+  if (!customSaved) {
+    await new Promise(resolve => {
+      if (canvas.toBlob) {
+        canvas.toBlob(blob => {
+          if (blob) {
+            const a = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            a.href = url;
+            a.download = fileName;
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(url), 10000);
+          } else {
+            // Fallback: toDataURL
+            const a = document.createElement('a');
+            a.href = canvas.toDataURL('image/png');
+            a.download = fileName;
+            a.click();
+          }
+          resolve();
+        }, 'image/png');
+      } else {
+        const a = document.createElement('a');
+        a.href = canvas.toDataURL('image/png');
+        a.download = fileName;
+        a.click();
         resolve();
-      }, 'image/png');
-    } else {
-      const a = document.createElement('a');
-      a.href = canvas.toDataURL('image/png');
-      a.download = fileName;
-      a.click();
-      resolve();
-    }
-  });
+      }
+    });
+  }
 
   iframe.remove();
   try { toast('Xuất ảnh xong!', 'success'); } catch (e) {}
@@ -6681,6 +6777,28 @@ function loadSettingsForm() {
 
   startDriveStorageAutoRefresh();
   initFabVisibility();
+  
+  // Custom Export Directory Init
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  if (!isMobile) {
+    document.getElementById('pc-export-dir-field').style.display = 'block';
+    if (window.showDirectoryPicker) {
+      getDirHandle().then(handle => {
+        if (handle) {
+          const input = document.getElementById('export-dir-name');
+          if (input) input.value = handle.name;
+        }
+      });
+    } else {
+      const input = document.getElementById('export-dir-name');
+      const btn = document.getElementById('pc-export-dir-field').querySelector('button');
+      if (input) {
+        input.value = 'Trình duyệt không hỗ trợ (Mở qua file:// hoặc không có HTTPS)';
+        input.style.color = '#d32f2f';
+      }
+      if (btn) btn.disabled = true;
+    }
+  }
 }
 function saveSettings() {
   const url = document.getElementById('cfg-script-url').value.trim();
