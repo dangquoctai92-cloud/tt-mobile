@@ -1987,7 +1987,7 @@ body.logged-in .chat-fab-wrap { display: block; }
         <table class="tbl">
           <thead>
             <tr>
-              <th></th>
+              <th style="text-align:center"><input type="checkbox" id="chk-all" onclick="toggleSelectAll(this.checked)" title="Chọn / bỏ chọn tất cả" style="cursor:pointer;width:15px;height:15px"></th>
               <th>STT</th>
               <th>Ngày nhận</th>
               <th>Khách hàng</th>
@@ -4043,6 +4043,7 @@ function updateMyAvatarPreview() {
   setAvatarElement(el, u);
 }
 let selectedTicketId = null;
+let selectedIds = new Set(); // các phiếu được tick để xóa hàng loạt
 let editingTicketId = null;
 let imgStore = { before_images: [], after_images: [], condition_images: [], repair_images: [] };
 // imgStore[attr] = array of { name, data (base64 mới) } HOẶC { url (đã có trên Drive) }
@@ -4057,6 +4058,123 @@ function waitForImageProcessingDone() {
 
 // ══════ HARDCODED CONFIG ══════
 const HARDCODED_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzfTRgDzhgkCvI6RF_bTvyVxQwmF9kE91IphrNQsPGEhx7qXyrqCUbm_nXW6gQ2QIb_2w/exec';
+
+// ══════ KHO URL APPS SCRIPT — tự phục hồi khi một URL chết ══════
+// Vấn đề cũ: app chỉ biết DUY NHẤT 1 URL. URL đó chết (deploy lại, thu hồi quyền…)
+// là toàn bộ app mất kết nối, và không có đường nào tự tìm lại. Kho URL này giữ
+// mọi URL từng hoạt động để thử lần lượt khi URL hiện tại hỏng.
+const URL_POOL_KEY  = 'suachua_url_pool';    // danh sách URL từng biết
+const PINNED_URL_KEY = 'suachua_pinned_url'; // URL do người dùng TỰ NHẬP (ưu tiên cao nhất)
+
+function isScriptUrl(u) {
+  return typeof u === 'string' && u.trim().includes('script.google.com/macros/');
+}
+function cleanScriptUrl(u) {
+  return isScriptUrl(u) ? u.trim() : '';
+}
+// URL người dùng tự nhập ở màn hình Cài đặt — lưu riêng, không thứ gì ghi đè được
+function getPinnedUrl() {
+  try { return cleanScriptUrl((JSON.parse(localStorage.getItem(PINNED_URL_KEY)) || {}).url); }
+  catch(e) { return ''; }
+}
+function getPinnedAt() {
+  try { return Number((JSON.parse(localStorage.getItem(PINNED_URL_KEY)) || {}).ts) || 0; }
+  catch(e) { return 0; }
+}
+function setPinnedUrl(url) {
+  const u = cleanScriptUrl(url);
+  if (!u) return;
+  try { localStorage.setItem(PINNED_URL_KEY, JSON.stringify({ url: u, ts: Date.now() })); } catch(e) {}
+}
+function getUrlPool() {
+  let pool = [];
+  try { pool = JSON.parse(localStorage.getItem(URL_POOL_KEY)) || []; } catch(e) {}
+  return pool.filter(isScriptUrl);
+}
+function rememberUrl(url) {
+  const u = cleanScriptUrl(url);
+  if (!u) return;
+  const pool = [u, ...getUrlPool().filter(x => x !== u)].slice(0, 8);
+  try { localStorage.setItem(URL_POOL_KEY, JSON.stringify(pool)); } catch(e) {}
+}
+// Danh sách ứng viên theo thứ tự ưu tiên, đã khử trùng lặp
+function candidateUrls(preferred) {
+  const list = [preferred, getPinnedUrl(), SETTINGS.scriptUrl, ...getUrlPool(), HARDCODED_SCRIPT_URL];
+  const seen = new Set();
+  return list.filter(u => {
+    const c = cleanScriptUrl(u);
+    if (!c || seen.has(c)) return false;
+    seen.add(c);
+    return true;
+  });
+}
+// Gõ cửa 1 URL xem còn sống không. Dùng action=getUsers vì doGet CHẮC CHẮN xử lý được
+// (action=ping chỉ có trong doPost — đó là lý do nút "Kiểm tra kết nối" hay báo sai).
+async function probeScriptUrl(url, timeoutMs) {
+  const u = cleanScriptUrl(url);
+  if (!u) return false;
+  try {
+    const sep = u.includes('?') ? '&' : '?';
+    const res = await fetchWithTimeout(u + sep + 'action=getUsers&t=' + Date.now(), timeoutMs || 8000);
+    const json = await res.json();
+    return !!(json && json.ok);
+  } catch(e) { return false; }
+}
+// Ghi nhận một URL đang hoạt động làm URL chính
+function adoptScriptUrl(url, opts) {
+  const u = cleanScriptUrl(url);
+  if (!u) return false;
+  SETTINGS.scriptUrl = u;
+  SETTINGS.driveConnected = true;
+  rememberUrl(u);
+  if (opts && opts.manual) setPinnedUrl(u);
+  saveStorage();
+  return true;
+}
+// Thử lần lượt mọi URL đã biết, lấy cái đầu tiên còn sống
+let _resolvingUrl = null;
+async function resolveWorkingScriptUrl(preferred) {
+  if (_resolvingUrl) return _resolvingUrl;
+  _resolvingUrl = (async () => {
+    for (const u of candidateUrls(preferred)) {
+      if (await probeScriptUrl(u)) { adoptScriptUrl(u); return u; }
+    }
+    return null;
+  })();
+  try { return await _resolvingUrl; } finally { _resolvingUrl = null; }
+}
+// Lấy users từ server, tự đổi URL khác nếu URL hiện tại chết
+async function fetchUsersJsonResilient() {
+  const hit = async (u) => {
+    const sep = u.includes('?') ? '&' : '?';
+    const res = await fetchWithTimeout(u + sep + 'action=getUsers&t=' + Date.now(), 8000);
+    return await res.json();
+  };
+  const primary = cleanScriptUrl(SETTINGS.scriptUrl) || HARDCODED_SCRIPT_URL;
+  try {
+    const json = await hit(primary);
+    if (json && json.ok) { rememberUrl(primary); return json; }
+  } catch(e) { console.warn('[url chính hỏng]', primary, e.message); }
+  const alt = await resolveWorkingScriptUrl();
+  if (alt && alt !== primary) {
+    try {
+      const json = await hit(alt);
+      if (json && json.ok) {
+        if (typeof toast === 'function') toast('☁ URL cũ đã chết — đã tự chuyển sang kết nối khác', 'success');
+        return json;
+      }
+    } catch(e) {}
+  }
+  return null;
+}
+// Dấu thời gian nhét trong cột displayName của dòng __config_script_url__
+function parseConfigTs(v) {
+  const m = String(v || '').match(/ts:(\d+)/);
+  return m ? Number(m[1]) : 0;
+}
+function configRow(url) {
+  return { username: '__config_script_url__', password: url, displayName: 'System Config ts:' + Date.now(), role: 'config' };
+}
 
 // Load từ localStorage
 function loadStorage() {
@@ -4084,21 +4202,20 @@ function loadStorage() {
     'https://script.google.com/macros/s/AKfycbyXaep_MMGmjG-pUdEoEh3RFAYRTTn9-RevZCTVoaML2SV2BgUtkiaEQIf82KVWIrXlWA/exec'
   ];
   
-  if (!SETTINGS.lastHardcodedUrl) {
-    // Chỉ ghi đè nếu URL hiện tại trống hoặc đang khớp với một trong các URL cũ mặc định
-    if (!SETTINGS.scriptUrl || knownOldUrls.includes(SETTINGS.scriptUrl)) {
-      SETTINGS.scriptUrl = HARDCODED_SCRIPT_URL;
-      SETTINGS.driveConnected = true;
-    }
-    SETTINGS.lastHardcodedUrl = HARDCODED_SCRIPT_URL;
-    saveStorage();
-  } else if (SETTINGS.lastHardcodedUrl !== HARDCODED_SCRIPT_URL) {
-    // Tự động chuyển đổi nếu lập trình viên cập nhật mã nguồn với URL mới
-    SETTINGS.scriptUrl = HARDCODED_SCRIPT_URL;
-    SETTINGS.lastHardcodedUrl = HARDCODED_SCRIPT_URL;
+  // URL do người dùng tự nhập ở Cài đặt LUÔN thắng — không bị hardcode ghi đè nữa
+  const pinnedUrl = getPinnedUrl();
+  if (pinnedUrl) {
+    SETTINGS.scriptUrl = pinnedUrl;
     SETTINGS.driveConnected = true;
-    saveStorage();
+  } else if (!SETTINGS.scriptUrl || knownOldUrls.includes(SETTINGS.scriptUrl)) {
+    SETTINGS.scriptUrl = HARDCODED_SCRIPT_URL;
+    SETTINGS.driveConnected = true;
   }
+  SETTINGS.lastHardcodedUrl = HARDCODED_SCRIPT_URL;
+  // Nạp mọi URL đã biết vào kho để còn đường quay lại khi URL hiện tại chết
+  rememberUrl(HARDCODED_SCRIPT_URL);
+  rememberUrl(SETTINGS.scriptUrl);
+  saveStorage();
 }
 function saveStorage() {
   try {
@@ -4190,26 +4307,30 @@ function processFetchedUsers(users) {
   
   // Tự động phát hiện và đồng bộ hóa URL Apps Script (Drive mới) từ cấu hình chung của hệ thống
   const configUser = users.find(u => u.username === '__config_script_url__');
-  if (configUser && configUser.password && configUser.password !== SETTINGS.scriptUrl) {
-    SETTINGS.scriptUrl = configUser.password;
-    SETTINGS.lastHardcodedUrl = configUser.password;
-    SETTINGS.driveConnected = true;
-    saveStorage();
-    if (typeof toast === 'function') toast('☁ Đã tự động đồng bộ kết nối mới từ hệ thống!', 'success');
-    if (typeof loadSettingsForm === 'function') loadSettingsForm();
+  const cfgUrl = configUser ? cleanScriptUrl(configUser.password) : '';
+  if (cfgUrl) {
+    rememberUrl(cfgUrl); // dù không dùng ngay, vẫn giữ làm phương án dự phòng
+    // URL mày tự nhập tay chỉ bị thay khi Sheets có cấu hình MỚI HƠN lần nhập đó
+    const pinnedNewer = getPinnedUrl() && getPinnedAt() >= parseConfigTs(configUser.displayName);
+    if (cfgUrl !== SETTINGS.scriptUrl && !pinnedNewer) {
+      // KHÔNG chuyển sang URL mới nếu chưa xác minh nó còn sống — đây chính là lỗi
+      // khiến app "lâu lâu" mất kết nối: Sheets giữ URL cũ đã chết và ghi đè URL đang chạy.
+      probeScriptUrl(cfgUrl).then(alive => {
+        if (!alive) { console.warn('[config URL đã chết, bỏ qua]', cfgUrl); return; }
+        adoptScriptUrl(cfgUrl);
+        if (typeof toast === 'function') toast('☁ Đã tự động đồng bộ kết nối mới từ hệ thống!', 'success');
+        if (typeof loadSettingsForm === 'function') loadSettingsForm();
+      });
+    }
   }
-  
+
   return users.filter(u => u.username !== '__config_script_url__');
 }
 
 // Lấy users từ Sheets bằng GET (tránh CORS của POST)
 async function fetchUsersFromSheets() {
-  const base = SETTINGS.scriptUrl || HARDCODED_SCRIPT_URL;
-  const sep = base.includes('?') ? '&' : '?';
-  const url = base + sep + 'action=getUsers&t=' + Date.now();
-  const res = await fetchWithTimeout(url, 8000);
-  const json = await res.json();
-  if (json.ok && json.users && json.users.length) {
+  const json = await fetchUsersJsonResilient();
+  if (json && json.ok && json.users && json.users.length) {
     AUTH.users = processFetchedUsers(json.users);
     const adminUser = AUTH.users.find(u => u.username === 'admin');
     if (adminUser) adminUser.role = 'admin';
@@ -4224,25 +4345,29 @@ async function syncUsersFromSheets() {
   try { await fetchUsersFromSheets(); } catch(e) { console.warn('[syncUsers]', e); }
 }
 
+// Đẩy danh sách user + URL hiện hành lên MỘT sheet cụ thể
+async function pushUsersTo(targetUrl, urlToAdvertise) {
+  const usersWithConfig = [
+    ...AUTH.users.filter(u => u.username !== '__config_script_url__'),
+    configRow(urlToAdvertise)
+  ];
+  const res = await fetch(targetUrl, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'saveUsers', users: usersWithConfig })
+  });
+  let json = null;
+  try { json = await res.json(); } catch (e) {}
+  if (!res.ok || (json && json.ok === false)) {
+    throw new Error((json && json.error) || ('http_' + res.status));
+  }
+  return true;
+}
+
 async function syncUsersToSheets() {
-  const url = SETTINGS.scriptUrl || HARDCODED_SCRIPT_URL;
+  const url = cleanScriptUrl(SETTINGS.scriptUrl) || HARDCODED_SCRIPT_URL;
   if (!url) return false;
   try {
-    // Luôn đính kèm URL Apps Script hiện tại vào danh sách người dùng lưu lên server để đồng bộ xuyên thiết bị
-    const usersWithConfig = [
-      ...AUTH.users.filter(u => u.username !== '__config_script_url__'),
-      { username: '__config_script_url__', password: url, displayName: 'System Config', role: 'config' }
-    ];
-    // POST để lưu users lên Sheets
-    const res = await fetch(url, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'saveUsers', users: usersWithConfig })
-    });
-    let json = null;
-    try { json = await res.json(); } catch (e) {}
-    if (!res.ok || (json && json.ok === false)) {
-      throw new Error((json && json.error) || ('http_' + res.status));
-    }
+    await pushUsersTo(url, url);
     return true;
   } catch(e) {
     console.warn('[saveUsers]', e);
@@ -4250,21 +4375,19 @@ async function syncUsersToSheets() {
   }
 }
 
-// Báo cho sheet cũ biết URL mới để các thiết bị khác đang dùng sheet cũ có thể tự động chuyển sang sheet mới
+// Báo cho MỌI sheet từng biết rằng URL mới là gì, để thiết bị nào còn kẹt ở URL cũ
+// vẫn đọc được đường sang URL mới. Trước đây chỉ báo cho đúng 1 sheet cũ.
+async function broadcastNewUrl(newUrl) {
+  const targets = candidateUrls().filter(u => u !== newUrl);
+  const results = await Promise.allSettled(targets.map(u => pushUsersTo(u, newUrl)));
+  return results.filter(r => r.status === 'fulfilled').length;
+}
+
+// Giữ tên cũ để các lời gọi sẵn có không gãy
 async function writeNewUrlToOldSheet(oldUrl, newUrl) {
   if (!oldUrl || !newUrl || oldUrl === newUrl) return;
-  try {
-    const usersWithConfig = [
-      ...AUTH.users.filter(u => u.username !== '__config_script_url__'),
-      { username: '__config_script_url__', password: newUrl, displayName: 'System Config', role: 'config' }
-    ];
-    await fetch(oldUrl, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'saveUsers', users: usersWithConfig })
-    });
-  } catch(e) {
-    console.warn('[Sync to old sheet failed]', e);
-  }
+  try { await pushUsersTo(oldUrl, newUrl); }
+  catch(e) { console.warn('[Sync to old sheet failed]', e); }
 }
 
 // ══════ AUTO PULL TU SHEETS KHI DANG NHAP ══════
@@ -4638,10 +4761,8 @@ function showAppScreen(user) {
     // Uu tien lay users tu server (dung voi moi thiet bi/an danh)
     let serverLoaded = false;
     try {
-      const base = SETTINGS.scriptUrl || HARDCODED_SCRIPT_URL;
-      const res = await fetchWithTimeout(base + '?action=getUsers&t=' + Date.now(), 8000);
-      const json = await res.json();
-      if (json.ok && json.users && json.users.length) {
+      const json = await fetchUsersJsonResilient();
+      if (json && json.ok && json.users && json.users.length) {
         AUTH.users = processFetchedUsers(json.users);
         const adminUser = AUTH.users.find(u => u.username === 'admin');
         if (adminUser) adminUser.role = 'admin';
@@ -4702,10 +4823,8 @@ async function doLogin() {
   let serverUsersLoaded = false;
   try {
     errEl.textContent = '⏳ Đang tải tài khoản từ server...';
-    const base = SETTINGS.scriptUrl || HARDCODED_SCRIPT_URL;
-    const res = await fetchWithTimeout(base + '?action=getUsers&t=' + Date.now(), 8000);
-    const json = await res.json();
-    if (json.ok && json.users && json.users.length) {
+    const json = await fetchUsersJsonResilient();
+    if (json && json.ok && json.users && json.users.length) {
       AUTH.users = processFetchedUsers(json.users);
       const adminUser = AUTH.users.find(x => x.username === 'admin');
       if (adminUser) adminUser.role = 'admin';
@@ -5709,7 +5828,7 @@ function renderTable(tickets) {
       
     return `
     <tr onclick="selectRow(${t.id})" ondblclick="quickView(${t.id})" id="row-${t.id}" class="${t.id === selectedTicketId ? 'selected' : ''}" title="Double-click để xem chi tiết">
-      <td><input type="radio" name="sel" ${t.id === selectedTicketId ? 'checked' : ''}></td>
+      <td style="text-align:center"><input type="checkbox" class="row-chk" data-id="${t.id}" ${selectedIds.has(t.id) ? 'checked' : ''} onclick="event.stopPropagation();toggleRowCheck(${t.id}, this.checked)" style="cursor:pointer;width:15px;height:15px"></td>
       <td class="mono" style="white-space:nowrap">${badge}#${t.id}</td>
       <td>${t.date_received || ''}</td>
       <td style="font-weight:600">${t.customer_name}</td>
@@ -5722,6 +5841,45 @@ function renderTable(tickets) {
       <td>${ownerLabel}</td>
     </tr>`;
   }).join('');
+  syncSelectionUi();
+}
+
+// ══════ CHỌN NHIỀU PHIẾU ĐỂ XÓA HÀNG LOẠT ══════
+function toggleRowCheck(id, on) {
+  if (on) selectedIds.add(id); else selectedIds.delete(id);
+  syncSelectionUi();
+}
+function toggleSelectAll(on) {
+  document.querySelectorAll('#ticket-tbody .row-chk').forEach(cb => {
+    cb.checked = on;
+    const id = Number(cb.dataset.id);
+    if (on) selectedIds.add(id); else selectedIds.delete(id);
+  });
+  syncSelectionUi();
+}
+// Cập nhật ô "chọn tất cả", nút Xóa và số phiếu đang chọn
+function syncSelectionUi() {
+  const boxes = [...document.querySelectorAll('#ticket-tbody .row-chk')];
+  const checked = boxes.filter(cb => cb.checked);
+  const all = document.getElementById('chk-all');
+  if (all) {
+    all.checked = boxes.length > 0 && checked.length === boxes.length;
+    all.indeterminate = checked.length > 0 && checked.length < boxes.length;
+  }
+  const btnDel = document.getElementById('btn-del');
+  if (btnDel) {
+    const n = selectedIds.size;
+    if (n > 0) {
+      btnDel.disabled = false;
+      btnDel.innerHTML = `<i data-lucide="trash-2" style="width:13px;height:13px"></i> Xóa (${n})`;
+    } else if (!selectedTicketId) {
+      btnDel.disabled = true;
+      btnDel.innerHTML = `<i data-lucide="trash-2" style="width:13px;height:13px"></i> Xóa`;
+    } else {
+      btnDel.innerHTML = `<i data-lucide="trash-2" style="width:13px;height:13px"></i> Xóa`;
+    }
+    if (window.lucide) lucide.createIcons();
+  }
 }
 function canEditTicket(ticketId) {
   const role = AUTH.currentUser?.role || 'viewer';
@@ -5764,6 +5922,8 @@ function selectRow(id) {
       document.getElementById('btn-del').title = '';
     }
   }
+  // Đang tick nhiều phiếu thì nút Xóa phải giữ nguyên trạng thái hàng loạt
+  syncSelectionUi();
 }
 function onTimeSelectChange() {
   const sel = document.getElementById('time-filter-select');
@@ -6253,19 +6413,31 @@ function editSelected() {
   showForm(selectedTicketId);
 }
 function deleteSelected() {
-  if (!selectedTicketId) return;
-  if (!canEditTicket(selectedTicketId)) { toast('Bạn không có quyền xóa phiếu này!', 'error'); return; }
-  if (!confirm(`Xóa phiếu #${selectedTicketId}?`)) return;
-  const id = selectedTicketId;
-  const ticket = DB.tickets.find(t => t.id === id);
-  DB.tickets = DB.tickets.filter(t => t.id !== id);
+  // Ưu tiên các phiếu đã tick; nếu không tick gì thì xóa phiếu đang chọn như cũ
+  const ids = selectedIds.size > 0 ? [...selectedIds] : (selectedTicketId ? [selectedTicketId] : []);
+  if (!ids.length) return;
+
+  const allowed = ids.filter(id => canEditTicket(id));
+  const denied = ids.length - allowed.length;
+  if (!allowed.length) { toast('Bạn không có quyền xóa những phiếu này!', 'error'); return; }
+
+  const hoi = allowed.length === 1
+    ? `Xóa phiếu #${allowed[0]}?`
+    : `Xóa ${allowed.length} phiếu đã chọn?\n\nKhông khôi phục lại được.`;
+  if (!confirm(denied ? hoi + `\n\n(${denied} phiếu bị bỏ qua do không đủ quyền)` : hoi)) return;
+
+  const removed = allowed.map(id => DB.tickets.find(t => t.id === id)).filter(Boolean);
+  const idSet = new Set(allowed);
+  DB.tickets = DB.tickets.filter(t => !idSet.has(t.id));
+
+  selectedIds.clear();
   selectedTicketId = null;
   document.getElementById('btn-edit').disabled = true;
   document.getElementById('btn-del').disabled = true;
   document.getElementById('btn-print').disabled = true;
   saveStorage(); renderTable(DB.tickets);
-  toast('Đã xóa phiếu', 'success');
-  deleteFromSheets(id, ticket);
+  toast(allowed.length === 1 ? 'Đã xóa phiếu' : `Đã xóa ${allowed.length} phiếu`, 'success');
+  removed.forEach(t => deleteFromSheets(t.id, t));
 }
 function deleteCurrentTicket() {
   if (!editingTicketId) return;
@@ -6800,28 +6972,64 @@ function loadSettingsForm() {
     }
   }
 }
-function saveSettings() {
+async function saveSettings() {
   const url = document.getElementById('cfg-script-url').value.trim();
-  const oldUrl = SETTINGS.scriptUrl;
 
-  // Báo cho sheet cũ biết URL mới trước khi chuyển đổi
-  if (oldUrl && url && oldUrl !== url) {
-    writeNewUrlToOldSheet(oldUrl, url);
-  }
-
-  SETTINGS.scriptUrl = url;
-  if (url && !SETTINGS.driveConnected) SETTINGS.driveConnected = false;
-  
-  // Gemini API Key
+  // Gemini API Key lưu ngay, không phụ thuộc mạng
   const geminiKeyEl = document.getElementById('cfg-gemini-key');
   if (geminiKeyEl) SETTINGS.geminiApiKey = geminiKeyEl.value.trim();
-  
+
+  if (url && !isScriptUrl(url)) {
+    saveStorage();
+    setMsg('✘ URL không hợp lệ! Phải có dạng script.google.com/macros/s/…/exec', 'var(--red)');
+    toast('URL Apps Script không hợp lệ', 'error');
+    return;
+  }
+  if (!url) {
+    saveStorage();
+    setMsg('✔ Đã lưu cài đặt.', 'var(--green)');
+    toast('Đã lưu cài đặt', 'success');
+    return;
+  }
+
+  const oldUrl = cleanScriptUrl(SETTINGS.scriptUrl);
+
+  // GHIM url này lại: từ giờ không hardcode hay cấu hình cũ nào ghi đè được nữa
+  setPinnedUrl(url);
+  rememberUrl(url);
+  SETTINGS.scriptUrl = url;
   saveStorage();
-  setMsg('✔ Đã lưu! Nhấn "Kiểm tra kết nối" để xác nhận.', 'var(--green)');
-  toast('Đã lưu cài đặt', 'success');
-  
-  // Tự động đẩy cấu hình URL mới lên Sheets mới
-  syncUsersToSheets();
+
+  setMsg('⏳ Đã lưu, đang kiểm tra kết nối…', 'var(--yellow)');
+  const alive = await probeScriptUrl(url, 10000);
+
+  if (!alive) {
+    SETTINGS.driveConnected = false;
+    saveStorage();
+    setMsg(`⚠ Đã lưu URL nhưng <b>chưa gọi được</b>. App vẫn chạy bằng dữ liệu máy này và sẽ tự thử lại.<br><br>
+    <b style="color:var(--text)">Kiểm tra lại:</b><br>
+    ✔ Deploy → New deployment (không phải Test deployment)<br>
+    ✔ Execute as: <b>Me</b> · Who has access: <b>Anyone</b><br>
+    ✔ URL kết thúc bằng <b>/exec</b> (không phải /dev)<br>
+    ✔ Mỗi lần sửa code phải deploy lại và <b>lấy URL mới</b>`, 'var(--yellow)');
+    toast('Chưa kết nối được URL mới', 'error');
+    return;
+  }
+
+  SETTINGS.driveConnected = true;
+  saveStorage();
+  updateDriveStatus(true);
+
+  // Ghi cấu hình lên sheet mới, rồi báo cho mọi sheet cũ để thiết bị khác tự chuyển sang
+  const okNew = await syncUsersToSheets();
+  let spread = 0;
+  if (oldUrl && oldUrl !== url) spread = await broadcastNewUrl(url);
+
+  setMsg(`✔ Kết nối thành công và đã ghi nhớ URL này.` +
+    (okNew ? ' Cấu hình đã lưu lên Sheets.' : ' (Chưa ghi được cấu hình lên Sheets — thử lại sau.)') +
+    (spread ? `<br>☁ Đã báo cho ${spread} kết nối cũ — thiết bị khác sẽ tự chuyển sang URL mới khi mở app.` : ''),
+    'var(--green)');
+  toast('Đã lưu & kết nối thành công', 'success');
 }
 
 let driveStorageInterval = null;
@@ -7300,49 +7508,52 @@ async function callScript(payload) {
 
 async function testDrive() {
   const url = document.getElementById('cfg-script-url').value.trim();
-  if (!url || !url.includes('script.google.com')) {
+  if (!isScriptUrl(url)) {
     setMsg('✘ URL không hợp lệ! Phải là URL từ Google Apps Script (script.google.com/macros/s/.../exec)', 'var(--red)');
     return;
   }
-  const oldUrl = SETTINGS.scriptUrl;
-
-  // Báo cho sheet cũ biết URL mới trước khi chuyển đổi
-  if (oldUrl && url && oldUrl !== url) {
-    writeNewUrlToOldSheet(oldUrl, url);
-  }
-
-  SETTINGS.scriptUrl = url;
+  const oldUrl = cleanScriptUrl(SETTINGS.scriptUrl);
   setMsg('⏳ Đang kết nối tới Google Sheets...', 'var(--yellow)');
-  try {
-    const res = await fetch(url + '?action=ping');
-    const json = await res.json();
-    if (json.ok) {
-      SETTINGS.driveConnected = true;
-      saveStorage();
-      setMsg('✔ Kết nối thành công! Dữ liệu sẽ tự đồng bộ lên Google Sheets sau mỗi lần lưu phiếu.', 'var(--green)');
-      updateDriveStatus(true);
-      toast('Kết nối Google Sheets thành công!', 'success');
-      // Tự động đẩy cấu hình URL mới lên Sheets
-      syncUsersToSheets();
-    } else throw new Error(json.error);
-  } catch(e) {
-    // CORS thường block GET, thử cách khác
-    setMsg(`Lưu ý: Không thể tự kiểm tra do CORS của trình duyệt. Nếu mày đã deploy đúng (Anyone can access), hãy lưu URL và thử lưu 1 phiếu — nếu lên Sheets là OK.<br><br>
-    <b>Lỗi:</b> ${e.message}<br><br>
-    <b style="color:var(--text)">Checklist:</b><br>
-    ✔ Deploy → New deployment (không phải Test deployment)<br>
-    ✔ Execute as: <b>Me</b><br>
-    ✔ Who has access: <b>Anyone</b><br>
-    ✔ Đã nhấn Allow khi Google hỏi quyền<br>
-    ✔ Copy đúng URL dạng: .../exec (không phải .../dev)`, 'var(--yellow)');
-    // Vẫn lưu URL để thử sync
-    SETTINGS.scriptUrl = url;
-    SETTINGS.driveConnected = true;
-    saveStorage();
+
+  // Kiểm tra bằng action=getUsers — doGet xử lý được. (action=ping chỉ tồn tại trong
+  // doPost, nên cách kiểm tra cũ báo lỗi cả khi URL vẫn hoàn toàn bình thường.)
+  if (await probeScriptUrl(url, 10000)) {
+    setPinnedUrl(url);
+    adoptScriptUrl(url, { manual: true });
     updateDriveStatus(true);
-    // Tự động đẩy cấu hình URL mới lên Sheets
-    syncUsersToSheets();
+    const okNew = await syncUsersToSheets();
+    let spread = 0;
+    if (oldUrl && oldUrl !== url) spread = await broadcastNewUrl(url);
+    setMsg('✔ Kết nối thành công! Đã ghi nhớ URL này — dữ liệu sẽ tự đồng bộ lên Google Sheets sau mỗi lần lưu phiếu.' +
+      (okNew ? '' : '<br>⚠ Chưa ghi được cấu hình lên Sheets, sẽ thử lại sau.') +
+      (spread ? `<br>☁ Đã báo cho ${spread} kết nối cũ để thiết bị khác tự chuyển sang.` : ''), 'var(--green)');
+    toast('Kết nối Google Sheets thành công!', 'success');
+    return;
   }
+
+  // URL này chết — thử mọi URL từng hoạt động trước khi bỏ cuộc
+  setMsg('⏳ URL này không phản hồi, đang thử các kết nối đã lưu…', 'var(--yellow)');
+  const alt = await resolveWorkingScriptUrl();
+  if (alt && alt !== url) {
+    document.getElementById('cfg-script-url').value = alt;
+    updateDriveStatus(true);
+    setMsg(`⚠ URL vừa nhập không phản hồi, nhưng tìm được một kết nối khác còn sống và đã chuyển sang:<br><code style="font-size:11px">${alt}</code><br>Nhấn <b>Lưu cài đặt</b> nếu muốn dùng luôn URL này.`, 'var(--yellow)');
+    toast('Đã tự chuyển sang kết nối còn sống', 'success');
+    return;
+  }
+
+  SETTINGS.driveConnected = false;
+  saveStorage();
+  updateDriveStatus(false);
+  setMsg(`✘ Không kết nối được URL nào. App vẫn chạy bình thường bằng dữ liệu lưu trên máy này.<br><br>
+  <b style="color:var(--text)">Checklist:</b><br>
+  ✔ Deploy → New deployment (không phải Test deployment)<br>
+  ✔ Execute as: <b>Me</b><br>
+  ✔ Who has access: <b>Anyone</b><br>
+  ✔ Đã nhấn Allow khi Google hỏi quyền<br>
+  ✔ Copy đúng URL dạng: .../exec (không phải .../dev)<br>
+  ✔ Sửa code Apps Script xong phải deploy lại và lấy <b>URL mới</b>`, 'var(--red)');
+  toast('Không kết nối được', 'error');
 }
 
 async function pullFromSheets() {
