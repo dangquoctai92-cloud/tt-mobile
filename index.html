@@ -2410,14 +2410,14 @@ body.logged-in .chat-fab-wrap { display: block; }
           Chưa cấu hình API Key
         </div>
         <select id="gemini-model-select" style="display: none;">
-          <option value="gemini-3.5-flash">⚡ Gemini 3.5 Flash</option>
+          <option value="gemini-3.6-flash">⚡ Gemini 3.6 Flash</option>
           <option value="gemini-3.1-flash-lite">💨 Gemini 3.1 Flash Lite</option>
         </select>
 
         <!-- Custom Gemini Dropdown -->
         <div class="gemini-custom-dropdown" id="gemini-custom-dropdown">
           <button type="button" class="gemini-dropdown-trigger" id="gemini-dropdown-trigger">
-            <span id="gemini-selected-label">3.5 Flash</span>
+            <span id="gemini-selected-label">3.6 Flash</span>
             <i data-lucide="chevron-down" style="width:14px;height:14px;color:var(--text2)"></i>
           </button>
           
@@ -2438,7 +2438,7 @@ body.logged-in .chat-fab-wrap { display: block; }
                 <i data-lucide="check" style="width:14px;height:14px"></i>
               </div>
               <div class="gemini-item-content">
-                <div class="gemini-item-title">3.5 Flash</div>
+                <div class="gemini-item-title">3.6 Flash</div>
                 <div class="gemini-item-desc">Trợ giúp toàn diện</div>
               </div>
             </div>
@@ -8642,7 +8642,7 @@ function initGeminiCustomDropdown() {
   // Sync HTML UI with state
   function updateUI() {
     // 1. Update trigger label
-    let label = '3.5 Flash';
+    let label = '3.6 Flash';
     if (state.model === 'lite') label = 'Flash-Lite';
     else if (state.model === 'flash') label = 'Flash';
     activeLabel.textContent = label;
@@ -8661,7 +8661,7 @@ function initGeminiCustomDropdown() {
     });
     
     // 3. Update the hidden real select
-    let apiModel = 'gemini-3.5-flash';
+    let apiModel = 'gemini-3.6-flash';
     if (state.model === 'lite') {
       apiModel = 'gemini-3.1-flash-lite';
     }
@@ -9255,7 +9255,7 @@ function analyzePanicLocally(logText) {
 
 // --- GỬI REQUEST GEMINI AI ---
 async function callGeminiAI(logText, base64Image, apiKey, modelName) {
-  modelName = modelName || 'gemini-3.5-flash';
+  modelName = modelName || 'gemini-3.6-flash';
   const isMultimodal = !!base64Image;
   let prompt = '';
   let inlineData = null;
@@ -9418,7 +9418,7 @@ async function analyzePanicLog() {
     }
     
     try {
-      const selectedModel = document.getElementById('gemini-model-select')?.value || 'gemini-3.5-flash';
+      const selectedModel = document.getElementById('gemini-model-select')?.value || 'gemini-3.6-flash';
       const aiResult = await callGeminiAI(logText, base64, key, selectedModel);
       
       // Fallback chẩn đoán đời máy cục bộ nếu AI không nhận dạng được
@@ -9433,7 +9433,7 @@ async function analyzePanicLog() {
       toast('Phân tích bằng Gemini AI thành công!', 'success');
     } catch(err) {
       console.error(err);
-      const selectedModel = document.getElementById('gemini-model-select')?.value || 'gemini-3.5-flash';
+      const selectedModel = document.getElementById('gemini-model-select')?.value || 'gemini-3.6-flash';
       let errMsg = err.message;
       
       const isQuotaError = errMsg.toLowerCase().includes('limit: 0') || errMsg.toLowerCase().includes('quota') || errMsg.toLowerCase().includes('429');
@@ -9442,7 +9442,7 @@ async function analyzePanicLog() {
         elCode.textContent = 'YÊU CẦU TRẢ PHÍ';
         elLine.textContent = errMsg;
         elCause.textContent = 'Mô hình Gemini 3.1 Pro yêu cầu tài khoản API Key trả phí (Paid Tier / Pay-as-you-go).';
-        elSolution.textContent = 'Vui lòng đổi sang dòng Flash (Gemini 3.5 Flash) bên trên để sử dụng miễn phí hoặc nâng cấp API Key của bạn!';
+        elSolution.textContent = 'Vui lòng đổi sang dòng Flash (Gemini 3.6 Flash) bên trên để sử dụng miễn phí hoặc nâng cấp API Key của bạn!';
         toast('Mô hình Pro yêu cầu API Key trả phí!', 'error');
         return;
       }
