@@ -4737,8 +4737,19 @@ function showAppScreen(user) {
 }
 
 // Auto-login neu da ghi nho
+const SKIP_LOGIN_SCREEN = true; // Chỉ 1 mình dùng nên tạm bỏ màn đăng nhập — đổi lại false để bật lại
 (async function checkAutoLogin() {
   try {
+    if (SKIP_LOGIN_SCREEN) {
+      const adminUser = AUTH.users.find(u => u.username === 'admin')
+        || { username: 'admin', password: 'admin123', displayName: 'Admin', role: 'admin' };
+      localStorage.setItem(SESSION_USER_KEY, adminUser.username);
+      AUTH.currentUser = adminUser;
+      showAppScreen(adminUser);
+      // Lỗi trong initApp (mạng chậm, sheet chưa phản hồi…) không được đá ngược về màn đăng nhập
+      try { initApp(); } catch(e) { console.warn('[initApp]', e); }
+      return;
+    }
     const saved = localStorage.getItem('suachua_remember'); // chỉ để điền mật khẩu
     const sessionUser = localStorage.getItem(SESSION_USER_KEY);
     if (!sessionUser) { showLoginScreen(); return; }
