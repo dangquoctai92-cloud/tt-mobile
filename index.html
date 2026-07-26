@@ -2271,6 +2271,273 @@ input:focus, select:focus, textarea:focus,
   background: linear-gradient(90deg, transparent, rgba(255,255,255,.14), transparent);
 }
 
+/* ═══════════════════════════════════════════════════════════
+   TRANG DANH SÁCH PHIẾU — bố cục mới
+   ═══════════════════════════════════════════════════════════ */
+
+/* Trang lấp đầy chiều cao, bảng giãn ra thay vì để hở mảng đen phía dưới */
+#page-list.active {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 64px);
+}
+#page-list .table-wrap {
+  flex: 1;
+  min-height: 260px;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, rgba(255,255,255,.028), rgba(255,255,255,.006));
+}
+#page-list .table-wrap > table { flex-shrink: 0; }
+
+/* ── Hàng lọc nhanh ── */
+.status-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin: 16px 0 4px;
+}
+.chip {
+  --chip: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px 8px 12px;
+  border-radius: 99px;
+  border: 1px solid rgba(255,255,255,.085);
+  background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.012));
+  color: var(--text2);
+  font-family: var(--font);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.05);
+  transition: transform .22s var(--ease), border-color .22s var(--ease),
+              color .22s var(--ease), box-shadow .22s var(--ease), background .22s var(--ease);
+}
+.chip svg { color: var(--chip); opacity: .82; transition: opacity .22s var(--ease); }
+.chip:hover {
+  transform: translateY(-2px);
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--chip) 42%, transparent);
+  box-shadow: 0 6px 18px rgba(0,0,0,.3);
+}
+.chip:hover svg { opacity: 1; }
+.chip.active {
+  color: #fff;
+  border-color: color-mix(in srgb, var(--chip) 55%, transparent);
+  background: linear-gradient(180deg,
+              color-mix(in srgb, var(--chip) 26%, transparent),
+              color-mix(in srgb, var(--chip) 9%,  transparent));
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--chip) 30%, transparent),
+              inset 0 1px 0 rgba(255,255,255,.14);
+}
+.chip.active svg { opacity: 1; }
+.chip-num {
+  min-width: 21px;
+  padding: 1px 7px;
+  border-radius: 99px;
+  background: rgba(0,0,0,.32);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+}
+.chip.active .chip-num { background: rgba(255,255,255,.20); color: #fff; }
+
+/* ── Thanh thao tác khi chọn phiếu ── */
+.sel-bar {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  padding: 10px 12px 10px 16px;
+  border-radius: 13px;
+  border: 1px solid rgba(77,148,255,.30);
+  background: linear-gradient(100deg, rgba(77,148,255,.16), rgba(77,148,255,.05));
+  box-shadow: 0 8px 26px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.09);
+}
+.sel-bar.show { display: flex; animation: selIn .26s var(--ease) both; }
+@keyframes selIn {
+  from { opacity: 0; transform: translateY(-7px); }
+  to   { opacity: 1; transform: none; }
+}
+.sel-bar-info {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 13px; font-weight: 700; color: #cfe1ff;
+}
+.sel-bar-info svg { color: var(--accent); }
+.sel-bar-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sel-bar-clear { padding: 8px 10px !important; }
+
+/* ── Nút thêm mới nổi bật hơn ── */
+.btn-add-main { padding: 10px 20px; font-size: 13.5px; border-radius: 11px; }
+
+/* ── Thanh công cụ ── */
+.toolbar { align-items: center; gap: 10px; }
+#page-list .search-wrap {
+  border-radius: 11px;
+  background: rgba(0,0,0,.26);
+  border: 1px solid rgba(255,255,255,.085);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,.3);
+}
+
+/* ── Các ô trong bảng ── */
+#page-list .tbl tbody td { padding: 11px 16px; vertical-align: middle; }
+.cel-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+.cel-phieu { display: flex; align-items: center; gap: 8px; }
+.cel-phieu .badge { margin: 0 !important; }
+.cel-id { font-size: 13px; font-weight: 700; color: var(--text); }
+
+.cel-kh { display: flex; align-items: center; gap: 10px; }
+.kh-ava {
+  flex-shrink: 0;
+  display: grid; place-items: center;
+  width: 34px; height: 34px;
+  border-radius: 11px;
+  font-size: 11.5px; font-weight: 800; letter-spacing: .3px;
+  color: #cfe1ff;
+  background: linear-gradient(145deg, rgba(77,148,255,.28), rgba(181,146,255,.14));
+  border: 1px solid rgba(255,255,255,.10);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.14);
+}
+.cel-ten { font-weight: 650; font-size: 13px; white-space: nowrap; }
+
+.cel-may { font-size: 13px; font-weight: 550; white-space: nowrap; }
+
+.cel-loi {
+  max-width: 190px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--text2); font-size: 12.5px;
+}
+
+.cel-tien {
+  text-align: right;
+  white-space: nowrap;
+  font-weight: 750;
+  font-size: 13.5px;
+  color: var(--green);
+  font-variant-numeric: tabular-nums;
+}
+.cel-tien span { font-size: 11px; opacity: .62; margin-left: 1px; }
+
+/* Màn hẹp thì giấu dần cột ít quan trọng, để Tổng tiền và Trạng thái luôn nhìn thấy —
+   đó là 2 thứ thợ cần liếc phát biết ngay. Thứ tự hi sinh: Người tạo → Lỗi báo. */
+@media (max-width: 1450px) {
+  #page-list .tbl thead th:nth-child(8),
+  #page-list .tbl tbody td:nth-child(8) { display: none; }   /* Người tạo */
+}
+@media (max-width: 1180px) {
+  #page-list .tbl thead th:nth-child(5),
+  #page-list .tbl tbody td:nth-child(5) { display: none; }   /* Lỗi báo */
+}
+#page-list .tbl th:nth-child(1) { width: 44px; }
+#page-list .tbl th:nth-child(2) { width: 118px; }
+#page-list .tbl th:nth-child(6) { width: 128px; }
+#page-list .tbl th:nth-child(7) { width: 128px; }
+
+/* Cửa sổ hẹp (chia đôi màn hình, laptop nhỏ): bóp gọn lại cho vừa,
+   tên khách / tên máy dài thì cắt bớt thay vì đẩy bảng tràn ngang. */
+@media (min-width: 769px) and (max-width: 1050px) {
+  #page-list .tbl thead th,
+  #page-list .tbl tbody td { padding-left: 10px; padding-right: 10px; }
+  .kh-ava { width: 28px; height: 28px; border-radius: 9px; font-size: 10px; }
+  .cel-kh { gap: 7px; }
+  .cel-ten, .cel-may { max-width: 128px; overflow: hidden; text-overflow: ellipsis; }
+  .cel-sub { font-size: 10px; }
+  #page-list .tbl th:nth-child(2) { width: 96px; }
+  #page-list .tbl th:nth-child(6) { width: 104px; }
+  #page-list .tbl th:nth-child(7) { width: 108px; }
+  .badge { font-size: 9.5px; padding: 2px 6px; }
+}
+
+/* ── Khi bảng rỗng ── */
+.empty-row td { padding: 0 !important; background: transparent !important; }
+.empty-row:hover { background: transparent !important; box-shadow: none !important; }
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 11px;
+  padding: 62px 20px 66px;
+  text-align: center;
+}
+.empty-ico {
+  display: grid;
+  place-items: center;
+  width: 68px; height: 68px;
+  border-radius: 20px;
+  color: var(--accent);
+  background: linear-gradient(150deg, rgba(77,148,255,.18), rgba(181,146,255,.07));
+  border: 1px solid rgba(77,148,255,.24);
+  box-shadow: 0 10px 30px rgba(77,148,255,.16), inset 0 1px 0 rgba(255,255,255,.12);
+}
+.empty-title { font-size: 15.5px; font-weight: 700; color: var(--text); }
+.empty-sub   { font-size: 13px; color: var(--text3); max-width: 340px; line-height: 1.6; }
+.empty-state .btn { margin-top: 6px; }
+
+/* ── Điện thoại: mỗi phiếu thành một THẺ thay vì dòng bảng kéo ngang ── */
+@media (max-width: 768px) {
+  #page-list .table-wrap { border: none; background: none; box-shadow: none; overflow: visible; }
+  #page-list .tbl { border-collapse: separate; border-spacing: 0; }
+  #page-list .tbl thead { display: none; }
+  #page-list .tbl tbody { display: flex; flex-direction: column; gap: 10px; }
+
+  #page-list .tbl tbody tr {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    grid-template-areas:
+      "chk  phieu  tien"
+      "chk  khach  khach"
+      "chk  may    trang";
+    align-items: center;
+    gap: 7px 10px;
+    padding: 13px 14px;
+    border: 1px solid rgba(255,255,255,.075);
+    border-radius: 14px;
+    background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01));
+    box-shadow: 0 4px 14px rgba(0,0,0,.26);
+  }
+  #page-list .tbl tbody tr:hover,
+  #page-list .tbl tbody tr.selected {
+    box-shadow: 0 4px 14px rgba(0,0,0,.26), inset 0 0 0 1.5px var(--accent);
+    background: linear-gradient(180deg, rgba(77,148,255,.13), rgba(77,148,255,.03));
+  }
+  #page-list .tbl tbody td { display: block; padding: 0 !important; border: none; }
+  #page-list .tbl tbody td:nth-child(1) { grid-area: chk;   align-self: start; padding-top: 3px !important; }
+  #page-list .tbl tbody td:nth-child(2) { grid-area: phieu; }
+  #page-list .tbl tbody td:nth-child(3) { grid-area: khach; }
+  #page-list .tbl tbody td:nth-child(4) { grid-area: may;   }
+  #page-list .tbl tbody td:nth-child(6) { grid-area: tien;  }
+  #page-list .tbl tbody td:nth-child(7) { grid-area: trang; text-align: right; }
+
+  #page-list .tbl tbody .cel-phieu { gap: 7px; }
+  #page-list .tbl tbody .cel-tien  { font-size: 15px; }
+  #page-list .tbl tbody .cel-ten   { font-size: 13.5px; }
+  #page-list .tbl tbody .kh-ava    { width: 30px; height: 30px; font-size: 10.5px; }
+
+  /* Màn hình trống nằm trong 1 ô -> bỏ kiểu thẻ đi cho nó chiếm hết bề ngang */
+  #page-list .tbl tbody tr.empty-row {
+    display: block; padding: 0; border: none; background: none; box-shadow: none;
+  }
+
+  #page-list.active { min-height: auto; }
+  .status-chips { gap: 7px; margin: 13px 0 2px; overflow-x: auto; flex-wrap: nowrap;
+                  padding-bottom: 4px; scrollbar-width: none; }
+  .status-chips::-webkit-scrollbar { display: none; }
+  .chip { padding: 7px 12px 7px 10px; font-size: 12px; }
+  .chip:hover { transform: none; }
+  .sel-bar { padding: 10px 12px; }
+  .sel-bar-actions { width: 100%; }
+  .sel-bar-actions .btn { flex: 1; }
+  .btn-add-main { width: 100%; }
+  .empty-state { padding: 44px 16px 48px; }
+}
+
 /* Nút nổi (chat / ghi chú) nằm đè lên hộp thoại — ẩn đi khi đang mở form */
 body:has(.modal-overlay.open) #chat-fab-wrap,
 body:has(.modal-overlay.open) #notes-fab-wrap {
@@ -2288,11 +2555,15 @@ body:has(.modal-overlay.open) #notes-fab-wrap {
   border-radius: 11px !important;
   box-shadow: 0 18px 44px rgba(0,0,0,.66) !important;
   min-width: 230px;
+  /* Ô nhập hẹp hơn 230px thì danh sách nở sang phải — chặn không cho tràn khỏi màn hình */
+  max-width: calc(100vw - 32px);
   z-index: 1200 !important;
   scrollbar-width: thin;
 }
 #model-dropdown > *, #sale-model-dropdown > * {
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;   /* tên dài thì cắt, đừng đẩy mã A ra ngoài mép */
   transition: background .16s var(--ease), padding-left .16s var(--ease);
 }
 #model-dropdown > *:hover, #sale-model-dropdown > *:hover {
@@ -2309,6 +2580,14 @@ body:has(.modal-overlay.open) #notes-fab-wrap {
   .modal-overlay { backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); }
   .img-slot:hover { transform: none; }
   .modal .section-card::after { height: 2px; }
+
+  /* Ô "Model máy" nằm ở cột phải và khá hẹp — cho danh sách nở ngược sang TRÁI,
+     không thì nở sang phải là lòi ra ngoài mép màn hình, che mất mã A. */
+  #model-dropdown, #sale-model-dropdown {
+    left: auto !important;
+    right: 0 !important;
+    min-width: 268px;
+  }
 }
 </style>
 </head>
@@ -2450,12 +2729,26 @@ body:has(.modal-overlay.open) #notes-fab-wrap {
         </button>
       </div>
 
+      <!-- Hàng lọc nhanh theo trạng thái — bấm vào lọc luôn, kèm số lượng -->
+      <div class="status-chips" id="status-chips"></div>
+
+      <!-- Thanh thao tác: chỉ hiện khi có phiếu được chọn -->
+      <div class="sel-bar" id="sel-bar">
+        <div class="sel-bar-info">
+          <i data-lucide="check-circle-2" style="width:16px;height:16px"></i>
+          <span id="sel-bar-count">Đã chọn 1 phiếu</span>
+        </div>
+        <div class="sel-bar-actions">
+          <button class="btn btn-ghost" id="btn-view" disabled onclick="viewSelected()" style="display:none"><i data-lucide="eye" style="width:13px;height:13px"></i> Xem</button>
+          <button class="btn btn-indigo" id="btn-edit" disabled onclick="editSelected()"><i data-lucide="pencil" style="width:13px;height:13px"></i> Sửa</button>
+          <button class="btn btn-yellow" id="btn-print" disabled onclick="printTicket()"><i data-lucide="printer" style="width:13px;height:13px"></i> In phiếu</button>
+          <button class="btn btn-red" id="btn-del" disabled onclick="deleteSelected()"><i data-lucide="trash-2" style="width:13px;height:13px"></i> Xóa</button>
+          <button class="btn btn-ghost sel-bar-clear" onclick="clearSelection()" title="Bỏ chọn"><i data-lucide="x" style="width:14px;height:14px"></i></button>
+        </div>
+      </div>
+
       <div class="toolbar">
-        <button class="btn btn-blue" onclick="openChoiceModal()"><i data-lucide="plus" style="width:14px;height:14px"></i>Thêm mới</button>
-        <button class="btn btn-ghost" id="btn-view" disabled onclick="viewSelected()" style="display:none"><i data-lucide="eye" style="width:13px;height:13px"></i> Xem</button>
-        <button class="btn btn-indigo" id="btn-edit" disabled onclick="editSelected()"><i data-lucide="pencil" style="width:13px;height:13px"></i> Sửa</button>
-        <button class="btn btn-red" id="btn-del" disabled onclick="deleteSelected()"><i data-lucide="trash-2" style="width:13px;height:13px"></i> Xóa</button>
-        <button class="btn btn-yellow" id="btn-print" disabled onclick="printTicket()"><i data-lucide="printer" style="width:13px;height:13px"></i> In phiếu</button>
+        <button class="btn btn-blue btn-add-main" onclick="openChoiceModal()"><i data-lucide="plus" style="width:15px;height:15px"></i>Thêm phiếu mới</button>
         <div class="toolbar-spacer"></div>
         <div style="display: flex; align-items: center; gap: 8px; margin-right: 8px;">
           <div class="search-wrap" style="padding: 0 6px;">
@@ -2490,14 +2783,11 @@ body:has(.modal-overlay.open) #notes-fab-wrap {
           <thead>
             <tr>
               <th style="text-align:center"><input type="checkbox" id="chk-all" onclick="toggleSelectAll(this.checked)" title="Chọn / bỏ chọn tất cả" style="cursor:pointer;width:15px;height:15px"></th>
-              <th>STT</th>
-              <th>Ngày nhận</th>
+              <th>Phiếu</th>
               <th>Khách hàng</th>
-              <th>SĐT</th>
-              <th>Hãng / Model</th>
-              <th>IMEI</th>
+              <th>Máy / IMEI</th>
               <th>Lỗi báo</th>
-              <th>Tổng tiền</th>
+              <th style="text-align:right">Tổng tiền</th>
               <th>Trạng thái</th>
               <th>Người tạo</th>
             </tr>
@@ -5519,7 +5809,8 @@ function showPage(id) {
 // Danh sách máy 2020 → 2026, xếp mới nhất lên đầu.
 // Giữ lại vài dòng cũ trước 2020 vì tiệm vẫn nhận sửa.
 const BRANDS_MODELS = {
-  'Apple': [
+  // iPhone và iPad tách thành 2 hãng riêng cho dễ chọn (trước gộp chung trong "Apple")
+  'iPhone': [
     // 2025
     'iPhone 17 Pro Max','iPhone 17 Pro','iPhone 17','iPhone Air','iPhone 16e',
     // 2024
@@ -5527,14 +5818,46 @@ const BRANDS_MODELS = {
     // 2023
     'iPhone 15 Pro Max','iPhone 15 Pro','iPhone 15 Plus','iPhone 15',
     // 2022
-    'iPhone 14 Pro Max','iPhone 14 Pro','iPhone 14 Plus','iPhone 14','iPhone SE 3 (2022)',
+    'iPhone 14 Pro Max','iPhone 14 Pro','iPhone 14 Plus','iPhone 14','iPhone SE 3',
     // 2021
     'iPhone 13 Pro Max','iPhone 13 Pro','iPhone 13','iPhone 13 mini',
     // 2020
-    'iPhone 12 Pro Max','iPhone 12 Pro','iPhone 12','iPhone 12 mini','iPhone SE 2 (2020)',
-    // Cũ hơn — vẫn hay sửa
-    'iPhone 11 Pro Max','iPhone 11 Pro','iPhone 11','iPhone XS Max','iPhone XS','iPhone XR','iPhone X',
-    'iPhone 8 Plus','iPhone 8','iPhone 7 Plus','iPhone 7'
+    'iPhone 12 Pro Max','iPhone 12 Pro','iPhone 12','iPhone 12 mini','iPhone SE 2',
+    // 2019
+    'iPhone 11 Pro Max','iPhone 11 Pro','iPhone 11',
+    // 2018
+    'iPhone XS Max','iPhone XS','iPhone XR',
+    // 2017
+    'iPhone X','iPhone 8 Plus','iPhone 8',
+    // 2016
+    'iPhone 7 Plus','iPhone 7','iPhone SE 1',
+    // 2015
+    'iPhone 6s Plus','iPhone 6s',
+    // 2014
+    'iPhone 6 Plus','iPhone 6'
+  ],
+  'iPad': [
+    // ── iPAD PRO ── (đời trùng kích thước thì phân biệt bằng chip hoặc Gen)
+    'iPad Pro M5 13"','iPad Pro M5 11"',
+    'iPad Pro M4 13"','iPad Pro M4 11"',
+    'iPad Pro M2 12.9"','iPad Pro M2 11"',
+    'iPad Pro M1 12.9"','iPad Pro M1 11"',
+    'iPad Pro 12.9" Gen 4','iPad Pro 11" Gen 2',
+    'iPad Pro 12.9" Gen 3','iPad Pro 11" Gen 1',
+    'iPad Pro 12.9" Gen 2','iPad Pro 10.5"',
+    'iPad Pro 9.7"','iPad Pro 12.9" Gen 1',
+
+    // ── iPAD AIR ──
+    'iPad Air M3 13"','iPad Air M3 11"',
+    'iPad Air M2 13"','iPad Air M2 11"',
+    'iPad Air 5','iPad Air 4','iPad Air 3','iPad Air 2','iPad Air 1',
+
+    // ── iPAD thường ──
+    'iPad 11','iPad 10','iPad 9','iPad 8','iPad 7','iPad 6','iPad 5',
+    'iPad 4','iPad 3','iPad 2',
+
+    // ── iPAD MINI ──
+    'iPad mini 7','iPad mini 6','iPad mini 5','iPad mini 4','iPad mini 3','iPad mini 2'
   ],
   'Samsung': [
     // 2026
@@ -5652,6 +5975,128 @@ const BRANDS_MODELS = {
   ],
   'Khác': []
 };
+
+// ══════ MÃ MODEL APPLE (chữ A in sau lưng máy) ══════
+// Gõ mã vào ô model là ra đúng máy, khỏi phải nhớ tên đời.
+// Mỗi máy có nhiều mã do khác bản Wi-Fi / 4G / vùng bán.
+const MODEL_CODES = {
+  // ── iPHONE ──
+  'iPhone 6':        ['A1549','A1586','A1589'],
+  'iPhone 6 Plus':   ['A1522','A1524','A1593'],
+  'iPhone 6s':       ['A1633','A1688','A1700'],
+  'iPhone 6s Plus':  ['A1634','A1687','A1699'],
+  'iPhone SE 1':     ['A1662','A1723','A1724'],
+  'iPhone 7':        ['A1660','A1778','A1779'],
+  'iPhone 7 Plus':   ['A1661','A1784','A1785'],
+  'iPhone 8':        ['A1863','A1905','A1906'],
+  'iPhone 8 Plus':   ['A1864','A1897','A1898'],
+  'iPhone X':        ['A1865','A1901','A1902'],
+  'iPhone XR':       ['A1984','A2105','A2106','A2108'],
+  'iPhone XS':       ['A1920','A2097','A2098','A2100'],
+  'iPhone XS Max':   ['A1921','A2101','A2102','A2104'],
+  'iPhone 11':          ['A2111','A2221','A2223'],
+  'iPhone 11 Pro':      ['A2160','A2215','A2217'],
+  'iPhone 11 Pro Max':  ['A2161','A2218','A2220'],
+  'iPhone SE 2':        ['A2275','A2296','A2298'],
+  'iPhone 12 mini':     ['A2176','A2398','A2399','A2400'],
+  'iPhone 12':          ['A2172','A2402','A2403','A2404'],
+  'iPhone 12 Pro':      ['A2341','A2406','A2407','A2408'],
+  'iPhone 12 Pro Max':  ['A2342','A2410','A2411','A2412'],
+  'iPhone 13 mini':     ['A2481','A2626','A2628','A2629','A2630'],
+  'iPhone 13':          ['A2482','A2631','A2633','A2634','A2635'],
+  'iPhone 13 Pro':      ['A2483','A2636','A2638','A2639','A2640'],
+  'iPhone 13 Pro Max':  ['A2484','A2641','A2643','A2644','A2645'],
+  'iPhone SE 3':        ['A2595','A2782','A2783','A2784','A2785'],
+  'iPhone 14':          ['A2649','A2881','A2882','A2883'],
+  'iPhone 14 Plus':     ['A2632','A2885','A2886','A2887'],
+  'iPhone 14 Pro':      ['A2650','A2889','A2890','A2891','A2892'],
+  'iPhone 14 Pro Max':  ['A2651','A2893','A2894','A2895','A2896'],
+  'iPhone 15':          ['A2846','A3089','A3090','A3092'],
+  'iPhone 15 Plus':     ['A2847','A3093','A3094','A3096'],
+  'iPhone 15 Pro':      ['A2848','A3101','A3102','A3104'],
+  'iPhone 15 Pro Max':  ['A2849','A3105','A3106','A3108'],
+  'iPhone 16':          ['A3081','A3286','A3287','A3288'],
+  'iPhone 16 Plus':     ['A3082','A3289','A3290','A3291'],
+  'iPhone 16 Pro':      ['A3083','A3292','A3293','A3294'],
+  'iPhone 16 Pro Max':  ['A3084','A3295','A3296','A3297'],
+
+  // ── iPAD thường ──
+  'iPad 2':  ['A1395','A1396','A1397'],
+  'iPad 3':  ['A1416','A1430','A1403'],
+  'iPad 4':  ['A1458','A1459','A1460'],
+  'iPad 5':  ['A1822','A1823'],
+  'iPad 6':  ['A1893','A1954'],
+  'iPad 7':  ['A2197','A2198','A2200'],
+  'iPad 8':  ['A2270','A2428','A2429','A2430'],
+  'iPad 9':  ['A2602','A2603','A2604','A2605'],
+  'iPad 10': ['A2696','A2757','A2777'],
+
+  // ── iPAD MINI ──
+  'iPad mini 2': ['A1489','A1490','A1491'],
+  'iPad mini 3': ['A1599','A1600'],
+  'iPad mini 4': ['A1538','A1550'],
+  'iPad mini 5': ['A2133','A2124','A2125','A2126'],
+  'iPad mini 6': ['A2567','A2568','A2569'],
+  'iPad mini 7': ['A2993','A2995','A2996'],
+
+  // ── iPAD AIR ──
+  'iPad Air 1':      ['A1474','A1475','A1476'],
+  'iPad Air 2':      ['A1566','A1567'],
+  'iPad Air 3':      ['A2152','A2123','A2153','A2154'],
+  'iPad Air 4':      ['A2316','A2324','A2325','A2072'],
+  'iPad Air 5':      ['A2588','A2589','A2591'],
+  'iPad Air M2 11"': ['A2902','A2903','A2904'],
+  'iPad Air M2 13"': ['A2898','A2899','A2900'],
+
+  // ── iPAD PRO ──
+  'iPad Pro 12.9" Gen 1': ['A1584','A1652'],
+  'iPad Pro 9.7"':        ['A1673','A1674','A1675'],
+  'iPad Pro 10.5"':       ['A1701','A1709','A1852'],
+  'iPad Pro 12.9" Gen 2': ['A1670','A1671','A1821'],
+  'iPad Pro 11" Gen 1':   ['A1980','A2013','A1934','A1979'],
+  'iPad Pro 12.9" Gen 3': ['A1876','A2014','A1895','A1983'],
+  'iPad Pro 11" Gen 2':   ['A2228','A2068','A2230','A2231'],
+  'iPad Pro 12.9" Gen 4': ['A2229','A2069','A2232','A2233'],
+  'iPad Pro M1 11"':      ['A2377','A2459','A2301','A2460'],
+  'iPad Pro M1 12.9"':    ['A2378','A2461','A2379','A2462'],
+  'iPad Pro M2 11"':      ['A2759','A2435','A2761','A2762'],
+  'iPad Pro M2 12.9"':    ['A2436','A2764','A2437','A2766'],
+  'iPad Pro M4 11"':      ['A2836','A2837','A3006'],
+  'iPad Pro M4 13"':      ['A2925','A2926','A3007']
+};
+
+// Chữ vừa gõ có phải đang tra mã A không? Phải là chữ A + số, hoặc từ 3 số trở lên.
+// Không siết vậy thì gõ "6" sẽ lôi cả đống máy có số 6 trong mã ra, rất rối.
+function looksLikeCode(q) {
+  return /^a\d{1,4}$/.test(q) || /^\d{3,4}$/.test(q);
+}
+
+// Mã A khớp với chữ vừa gõ — để hiện bên phải cho thợ đối chiếu với lưng máy
+function matchedCode(model, query) {
+  const q = (query || '').toLowerCase().replace(/[\s"]/g, '');
+  if (!q || !looksLikeCode(q)) return '';
+  const codes = MODEL_CODES[model] || [];
+  return codes.find(c => c.toLowerCase().includes(q)) || '';
+}
+
+// So khớp máy với chữ người dùng gõ — khớp tên máy, hoặc mã A nếu gõ đúng dạng mã.
+// Bỏ khoảng trắng và dấu nháy để gõ "ipadpro11" hay "a2429" đều ra.
+function modelMatchesQuery(model, query) {
+  const q = (query || '').toLowerCase().replace(/[\s"]/g, '');
+  if (!q) return true;
+  if (model.toLowerCase().replace(/[\s"]/g, '').includes(q)) return true;
+  return !!matchedCode(model, q);
+}
+
+// Phiếu cũ lưu hãng là "Apple" (hồi iPhone và iPad còn chung một mục).
+// Giờ đã tách đôi nên khi mở lại phiếu cũ phải suy ra đúng hãng từ tên máy,
+// không thì ô hãng rơi về mục đầu danh sách và phiếu iPad bị ghi thành iPhone.
+function normalizeBrand(brand, model) {
+  const b = (brand || '').trim();
+  if (b && b.toLowerCase() !== 'apple') return b;          // hãng khác: giữ nguyên
+  return /ipad/i.test(model || '') ? 'iPad' : 'iPhone';    // Apple hoặc trống → suy từ model
+}
+
 // ══════ NEW SALE BRAND / MODEL FUNCTIONS & MODAL HANDLERS ══════
 function openChoiceModal() {
   const modal = document.getElementById('choice-modal');
@@ -5695,13 +6140,14 @@ function filterSaleModelDropdown() {
   if (!drop) return;
   
   drop.innerHTML = '';
-  const filtered = models.filter(m => m.toLowerCase().includes(val));
-  
+  // Khớp cả tên máy lẫn mã A sau lưng (vd gõ "a2429" ra iPad 8)
+  const filtered = models.filter(m => modelMatchesQuery(m, val));
+
   if (filtered.length === 0) {
     drop.style.display = 'none';
     return;
   }
-  
+
   filtered.forEach(m => {
     const d = document.createElement('div');
     d.textContent = m;
@@ -5709,12 +6155,26 @@ function filterSaleModelDropdown() {
     d.style.cursor = 'pointer';
     d.style.borderBottom = '1px solid var(--border)';
     d.style.color = 'var(--text)';
-    
+
+    // Tìm ra nhờ mã A thì hiện mã bên phải để đối chiếu với lưng máy
+    const code = matchedCode(m, val);
+    if (code) {
+      d.style.display = 'flex';
+      d.style.justifyContent = 'space-between';
+      d.style.alignItems = 'center';
+      d.style.gap = '10px';
+      const tag = document.createElement('span');
+      tag.textContent = code;
+      tag.style.cssText = 'font-family:var(--mono);font-size:11px;color:var(--accent);'
+        + 'background:rgba(77,148,255,.14);padding:2px 7px;border-radius:5px;flex-shrink:0';
+      d.appendChild(tag);
+    }
+
     d.onmouseover = () => d.style.background = 'rgba(255,255,255,0.08)';
     d.onmouseout = () => d.style.background = 'transparent';
-    
+
     d.onmousedown = function(e) {
-      e.preventDefault(); 
+      e.preventDefault();
       inp.value = m;
       drop.style.display = 'none';
       drop.dataset.forceOpen = 'false';
@@ -5767,13 +6227,14 @@ function filterModelDropdown() {
   if (!drop) return;
   
   drop.innerHTML = '';
-  const filtered = models.filter(m => m.toLowerCase().includes(val));
-  
+  // Khớp cả tên máy lẫn mã A sau lưng (vd gõ "a2429" ra iPad 8)
+  const filtered = models.filter(m => modelMatchesQuery(m, val));
+
   if (filtered.length === 0) {
     drop.style.display = 'none';
     return;
   }
-  
+
   filtered.forEach(m => {
     const d = document.createElement('div');
     d.textContent = m;
@@ -5781,12 +6242,26 @@ function filterModelDropdown() {
     d.style.cursor = 'pointer';
     d.style.borderBottom = '1px solid var(--border)';
     d.style.color = 'var(--text)';
-    
+
+    // Tìm ra nhờ mã A thì hiện mã bên phải để đối chiếu với lưng máy
+    const code = matchedCode(m, val);
+    if (code) {
+      d.style.display = 'flex';
+      d.style.justifyContent = 'space-between';
+      d.style.alignItems = 'center';
+      d.style.gap = '10px';
+      const tag = document.createElement('span');
+      tag.textContent = code;
+      tag.style.cssText = 'font-family:var(--mono);font-size:11px;color:var(--accent);'
+        + 'background:rgba(77,148,255,.14);padding:2px 7px;border-radius:5px;flex-shrink:0';
+      d.appendChild(tag);
+    }
+
     d.onmouseover = () => d.style.background = 'rgba(255,255,255,0.08)';
     d.onmouseout = () => d.style.background = 'transparent';
-    
+
     d.onmousedown = function(e) {
-      e.preventDefault(); 
+      e.preventDefault();
       inp.value = m;
       drop.style.display = 'none';
       drop.dataset.forceOpen = 'false';
@@ -6462,8 +6937,29 @@ function renderTable(tickets) {
   if (role === 'manager') {
     tickets = tickets.filter(t => t.created_by === me);
   }
+  // Vẽ hàng chip TRƯỚC khi lọc theo trạng thái, để số trên chip là tổng thật
+  renderStatusChips(tickets);
+  if (statusFilter !== 'all') {
+    tickets = tickets.filter(t => t.status === statusFilter);
+  }
+
   if (!tickets.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="10">Không có phiếu nào.</td></tr>';
+    const loc = statusFilter !== 'all' || searchVal || timeVal !== 'all';
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="8">
+      <div class="empty-state">
+        <div class="empty-ico"><i data-lucide="${loc ? 'search-x' : 'clipboard-list'}" style="width:30px;height:30px"></i></div>
+        <div class="empty-title">${loc ? 'Không tìm thấy phiếu nào' : 'Chưa có phiếu nào'}</div>
+        <div class="empty-sub">${loc
+          ? 'Thử bỏ bớt bộ lọc hoặc đổi từ khóa tìm kiếm.'
+          : 'Bấm nút bên dưới để tạo phiếu sửa chữa đầu tiên.'}</div>
+        ${loc
+          ? `<button class="btn btn-ghost" onclick="resetAllFilters()"><i data-lucide="rotate-ccw" style="width:13px;height:13px"></i> Bỏ hết bộ lọc</button>`
+          : `<button class="btn btn-blue" onclick="openChoiceModal()"><i data-lucide="plus" style="width:14px;height:14px"></i> Tạo phiếu mới</button>`}
+      </div></td></tr>`;
+    if (window.lucide) lucide.createIcons();
+    // Bảng rỗng thì cũng phải cập nhật lại thanh chọn, không thì nó treo
+    // câu "Đã chọn N phiếu" của lần lọc trước dù chẳng còn dòng nào.
+    syncSelectionUi();
     return;
   }
   tbody.innerHTML = tickets.map(t => {
@@ -6483,17 +6979,43 @@ function renderTable(tickets) {
       ? `<span class="badge badge-green" style="font-size:9.5px;padding:2px 4px;margin-right:4px;vertical-align:middle;display:inline-flex;align-items:center;gap:2px;">💰 Bán</span>` 
       : `<span class="badge badge-blue" style="font-size:9.5px;padding:2px 4px;margin-right:4px;vertical-align:middle;display:inline-flex;align-items:center;gap:2px;">🛠️ Sửa</span>`;
       
+    // Hãng giờ là "iPhone"/"iPad" nên tên model đã chứa sẵn hãng — ghép thẳng sẽ
+    // ra "iPhone iPhone 14 Pro Max". Chỉ thêm hãng khi model chưa có.
+    const may = (t.model || '').toLowerCase().startsWith((t.brand || '').toLowerCase())
+      ? (t.model || t.brand || '—')
+      : `${t.brand || ''} ${t.model || ''}`.trim() || '—';
+
+    // 2 chữ đầu tên khách làm ảnh đại diện
+    const tenKH = t.customer_name || '—';
+    const chuCai = tenKH.trim().split(/\s+/).slice(-2).map(w => w[0] || '').join('').toUpperCase() || '?';
+
     return `
-    <tr onclick="selectRow(${t.id})" ondblclick="quickView(${t.id})" id="row-${t.id}" class="${t.id === selectedTicketId ? 'selected' : ''}" title="Double-click để xem chi tiết">
+    <tr onclick="selectRow(${t.id})" ondblclick="quickView(${t.id})" id="row-${t.id}" class="${t.id === selectedTicketId ? 'selected' : ''}" title="Nháy đúp để xem chi tiết">
       <td style="text-align:center"><input type="checkbox" class="row-chk" data-id="${t.id}" ${selectedIds.has(t.id) ? 'checked' : ''} onclick="event.stopPropagation();toggleRowCheck(${t.id}, this.checked)" style="cursor:pointer;width:15px;height:15px"></td>
-      <td class="mono" style="white-space:nowrap">${badge}#${t.id}</td>
-      <td>${t.date_received || ''}</td>
-      <td style="font-weight:600">${t.customer_name}</td>
-      <td class="mono">${t.phone || ''}</td>
-      <td>${t.brand || ''} ${t.model || ''}</td>
-      <td class="mono" style="font-size:12px;color:var(--text2)">${t.imei || ''}</td>
-      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${isSale ? `Bán máy (BH: ${t.notes_warranty || 'Không'})` : (t.problem || '')}</td>
-      <td style="font-weight:700;color:var(--green)">${(t.total||0).toLocaleString('vi-VN')}đ</td>
+      <td>
+        <div class="cel-phieu">
+          ${badge}
+          <div>
+            <div class="cel-id mono">#${t.id}</div>
+            <div class="cel-sub">${t.date_received || ''}</div>
+          </div>
+        </div>
+      </td>
+      <td>
+        <div class="cel-kh">
+          <span class="kh-ava">${chuCai}</span>
+          <div>
+            <div class="cel-ten">${tenKH}</div>
+            <div class="cel-sub mono">${t.phone || '—'}</div>
+          </div>
+        </div>
+      </td>
+      <td>
+        <div class="cel-may">${may}</div>
+        <div class="cel-sub mono">${t.imei || '—'}</div>
+      </td>
+      <td class="cel-loi">${isSale ? `Bán máy (BH: ${t.notes_warranty || 'Không'})` : (t.problem || '—')}</td>
+      <td class="cel-tien">${(t.total||0).toLocaleString('vi-VN')}<span>đ</span></td>
       <td>${statusBadge(t.status || (isSale ? 'Đã thanh toán' : 'Đang sửa'))}</td>
       <td>${ownerLabel}</td>
     </tr>`;
@@ -6537,7 +7059,81 @@ function syncSelectionUi() {
     }
     if (window.lucide) lucide.createIcons();
   }
+
+  // Thanh thao tác chỉ trồi ra khi có phiếu được chọn — lúc rảnh thì ẩn đi cho gọn
+  const bar = document.getElementById('sel-bar');
+  if (bar) {
+    const n = selectedIds.size;
+    const dangChon = n > 0 || !!selectedTicketId;
+    bar.classList.toggle('show', dangChon);
+    const lbl = document.getElementById('sel-bar-count');
+    if (lbl && dangChon) {   // không chọn gì thì giữ nguyên chữ cũ, tránh lóe "#null" lúc thanh thu lại
+      lbl.textContent = n >= 1 ? `Đã chọn ${n} phiếu` : `Phiếu #${selectedTicketId}`;
+    }
+  }
 }
+
+// Bỏ chọn tất cả, thu thanh thao tác lại
+function clearSelection() {
+  selectedIds.clear();
+  selectedTicketId = null;
+  document.querySelectorAll('#ticket-tbody .row-chk').forEach(cb => cb.checked = false);
+  document.querySelectorAll('.tbl tbody tr').forEach(r => r.classList.remove('selected'));
+  ['btn-edit','btn-del','btn-print','btn-view'].forEach(id => {
+    const b = document.getElementById(id); if (b) b.disabled = true;
+  });
+  syncSelectionUi();
+}
+
+// ══════ LỌC NHANH THEO TRẠNG THÁI ══════
+let statusFilter = 'all';
+
+const STATUS_CHIPS = [
+  { key: 'all',           label: 'Tất cả',       icon: 'layers',        color: 'var(--accent)' },
+  { key: 'Đang sửa',      label: 'Đang sửa',     icon: 'wrench',        color: 'var(--accent)' },
+  { key: 'Chờ linh kiện', label: 'Chờ linh kiện',icon: 'package',       color: 'var(--yellow)' },
+  { key: 'Hoàn thành',    label: 'Hoàn thành',   icon: 'check-circle-2',color: 'var(--green)'  },
+  { key: 'Còn nợ',        label: 'Còn nợ',       icon: 'wallet',        color: 'var(--pink)'   },
+];
+
+function setStatusFilter(key) {
+  statusFilter = key;
+  clearSelection();
+  renderTable(DB.tickets);
+}
+
+// Gỡ sạch mọi bộ lọc: trạng thái + ô tìm kiếm + khoảng thời gian
+function resetAllFilters() {
+  statusFilter = 'all';
+  ['desktop-search-input','mobile-search-input'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  const tf = document.getElementById('time-filter-select');
+  if (tf) { tf.value = 'all'; onTimeSelectChange(); }
+  clearSelection();
+  renderTable(DB.tickets);
+}
+
+// Vẽ lại hàng chip kèm số lượng. `list` là danh sách ĐÃ lọc theo tìm kiếm/thời gian
+// nhưng CHƯA lọc theo trạng thái — có vậy số trên chip mới đúng.
+function renderStatusChips(list) {
+  const wrap = document.getElementById('status-chips');
+  if (!wrap) return;
+  const dem = (k) => k === 'all' ? list.length : list.filter(t => t.status === k).length;
+
+  wrap.innerHTML = STATUS_CHIPS.map(c => {
+    const n = dem(c.key);
+    const on = statusFilter === c.key;
+    return `<button class="chip${on ? ' active' : ''}" style="--chip:${c.color}"
+              onclick="setStatusFilter('${c.key.replace(/'/g, "\\'")}')">
+              <i data-lucide="${c.icon}" style="width:14px;height:14px"></i>
+              <span>${c.label}</span>
+              <b class="chip-num">${n}</b>
+            </button>`;
+  }).join('');
+  if (window.lucide) lucide.createIcons();
+}
+
 function canEditTicket(ticketId) {
   const role = AUTH.currentUser?.role || 'viewer';
   if (role === 'admin') return true;
@@ -6733,9 +7329,10 @@ function showForm(ticketId = null, readonly = false, type = 'repair') {
     if (currentType === 'sale') {
       document.getElementById('fs-customer').value = t.customer_name || '';
       document.getElementById('fs-phone').value = normalizePhone(t.phone);
-      document.getElementById('fs-brand').value = t.brand || 'Apple';
+      const saleBrand = normalizeBrand(t.brand, t.model);
+      document.getElementById('fs-brand').value = saleBrand;
       populateSaleBrands();
-      document.getElementById('fs-brand').value = t.brand || 'Apple';
+      document.getElementById('fs-brand').value = saleBrand;
       updateSaleModels();
       document.getElementById('fs-model').value = t.model || '';
       document.getElementById('fs-imei').value = normalizeTextField(t.imei);
@@ -6750,9 +7347,10 @@ function showForm(ticketId = null, readonly = false, type = 'repair') {
     } else {
       document.getElementById('f-customer').value = t.customer_name || '';
       document.getElementById('f-phone').value = normalizePhone(t.phone);
-      document.getElementById('f-brand').value = t.brand || 'Apple';
+      const repairBrand = normalizeBrand(t.brand, t.model);
+      document.getElementById('f-brand').value = repairBrand;
       populateBrands();
-      document.getElementById('f-brand').value = t.brand || 'Apple';
+      document.getElementById('f-brand').value = repairBrand;
       updateModels();
       document.getElementById('f-model').value = t.model || '';
       document.getElementById('f-imei').value = normalizeTextField(t.imei);
