@@ -2251,6 +2251,33 @@ input:focus, select:focus, textarea:focus,
 .img-slot:hover .img-preview-empty { color: var(--accent); transform: scale(1.14); }
 .img-preview img { border-radius: 8px; }
 
+/* Nút xoay ảnh — nằm góc trên phải của ô ảnh, chỉ hiện khi ô có ảnh */
+.img-rotate-btn {
+  position: absolute;
+  top: 6px; right: 6px;
+  z-index: 3;
+  display: grid; place-items: center;
+  width: 30px; height: 30px;
+  border-radius: 9px;
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(10,11,16,.72);
+  backdrop-filter: blur(6px);
+  color: #eaf1ff;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(0,0,0,.4);
+  transition: background .18s var(--ease), transform .18s var(--ease), color .18s var(--ease);
+}
+.img-rotate-btn:hover {
+  background: var(--accent);
+  color: #fff;
+  transform: rotate(90deg);
+}
+.img-rotate-btn:active { transform: rotate(90deg) scale(.9); }
+/* Trên điện thoại nút to hơn cho dễ bấm */
+@media (max-width: 768px) {
+  .img-rotate-btn { width: 34px; height: 34px; top: 7px; right: 7px; }
+}
+
 .img-btn {
   border-radius: 8px;
   padding: 6px 4px;
@@ -2431,9 +2458,10 @@ input:focus, select:focus, textarea:focus,
   #page-list .tbl thead th:nth-child(8),
   #page-list .tbl tbody td:nth-child(8) { display: none; }   /* Người tạo */
 }
-@media (max-width: 1180px) {
+/* Chỉ giấu "Lỗi báo" ở khổ bảng chật — bản điện thoại là thẻ nên vẫn hiện được */
+@media (min-width: 769px) and (max-width: 1180px) {
   #page-list .tbl thead th:nth-child(5),
-  #page-list .tbl tbody td:nth-child(5) { display: none; }   /* Lỗi báo */
+  #page-list .tbl tbody td:nth-child(5) { display: none; }
 }
 #page-list .tbl th:nth-child(1) { width: 44px; }
 #page-list .tbl th:nth-child(2) { width: 118px; }
@@ -2491,34 +2519,58 @@ input:focus, select:focus, textarea:focus,
     display: grid;
     grid-template-columns: auto 1fr auto;
     grid-template-areas:
-      "chk  phieu  tien"
-      "chk  khach  khach"
-      "chk  may    trang";
+      "chk   phieu  trang"
+      "khach khach  khach"
+      "may   may    may"
+      "loi   loi    tien";
     align-items: center;
-    gap: 7px 10px;
-    padding: 13px 14px;
+    gap: 0;
+    padding: 12px 14px 10px;
     border: 1px solid rgba(255,255,255,.075);
-    border-radius: 14px;
-    background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01));
-    box-shadow: 0 4px 14px rgba(0,0,0,.26);
+    border-radius: 15px;
+    background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.012));
+    box-shadow: 0 4px 16px rgba(0,0,0,.28);
   }
   #page-list .tbl tbody tr:hover,
   #page-list .tbl tbody tr.selected {
-    box-shadow: 0 4px 14px rgba(0,0,0,.26), inset 0 0 0 1.5px var(--accent);
-    background: linear-gradient(180deg, rgba(77,148,255,.13), rgba(77,148,255,.03));
+    box-shadow: 0 4px 16px rgba(0,0,0,.28), inset 0 0 0 1.6px var(--accent);
+    background: linear-gradient(180deg, rgba(77,148,255,.14), rgba(77,148,255,.03));
   }
   #page-list .tbl tbody td { display: block; padding: 0 !important; border: none; }
-  #page-list .tbl tbody td:nth-child(1) { grid-area: chk;   align-self: start; padding-top: 3px !important; }
+
+  /* Hàng 1: ô tick · số phiếu + loại · trạng thái */
+  #page-list .tbl tbody td:nth-child(1) { grid-area: chk; padding-right: 10px !important; }
   #page-list .tbl tbody td:nth-child(2) { grid-area: phieu; }
-  #page-list .tbl tbody td:nth-child(3) { grid-area: khach; }
-  #page-list .tbl tbody td:nth-child(4) { grid-area: may;   }
-  #page-list .tbl tbody td:nth-child(6) { grid-area: tien;  }
   #page-list .tbl tbody td:nth-child(7) { grid-area: trang; text-align: right; }
 
-  #page-list .tbl tbody .cel-phieu { gap: 7px; }
-  #page-list .tbl tbody .cel-tien  { font-size: 15px; }
-  #page-list .tbl tbody .cel-ten   { font-size: 13.5px; }
-  #page-list .tbl tbody .kh-ava    { width: 30px; height: 30px; font-size: 10.5px; }
+  /* Hàng 2 & 3: khách hàng và máy — cùng thụt 27px cho thẳng một rãnh với số phiếu */
+  #page-list .tbl tbody td:nth-child(3) { grid-area: khach; padding: 11px 0 0 27px !important; }
+  #page-list .tbl tbody td:nth-child(4) { grid-area: may;   padding: 9px 0 0 27px !important; }
+
+  /* Hàng 3: chân thẻ — lỗi báo bên trái, tiền bên phải */
+  #page-list .tbl tbody td:nth-child(5) {
+    grid-area: loi;
+    padding: 9px 8px 0 27px !important;   /* thụt cho thẳng rãnh với các hàng trên */
+    margin-top: 10px;
+    border-top: 1px solid rgba(255,255,255,.07);
+  }
+  #page-list .tbl tbody td:nth-child(6) {
+    grid-area: tien;
+    padding: 9px 0 0 0 !important;
+    margin-top: 10px;
+    border-top: 1px solid rgba(255,255,255,.07);
+    text-align: right;
+  }
+
+  #page-list .tbl tbody .cel-phieu  { gap: 8px; }
+  #page-list .tbl tbody .cel-id     { font-size: 14px; }
+  #page-list .tbl tbody .cel-tien   { font-size: 15.5px; }
+  #page-list .tbl tbody .cel-ten    { font-size: 14px; }
+  #page-list .tbl tbody .cel-may    { font-size: 12.5px; color: var(--text2); font-weight: 600; }
+  #page-list .tbl tbody .cel-loi    { max-width: none; font-size: 12.5px; }
+  #page-list .tbl tbody .kh-ava     { width: 34px; height: 34px; font-size: 11px; }
+  #page-list .tbl tbody .cel-kh     { gap: 10px; align-items: center; }
+  #page-list .tbl tbody input[type=checkbox] { width: 17px; height: 17px; }
 
   /* Màn hình trống nằm trong 1 ô -> bỏ kiểu thẻ đi cho nó chiếm hết bề ngang */
   #page-list .tbl tbody tr.empty-row {
@@ -2537,6 +2589,216 @@ input:focus, select:focus, textarea:focus,
   .btn-add-main { width: 100%; }
   .empty-state { padding: 44px 16px 48px; }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   SIDEBAR 2.0 — thiết kế lại
+   ═══════════════════════════════════════════════════════════ */
+.sidebar {
+  width: 264px;
+  background:
+    radial-gradient(30rem 20rem at -20% 0%, rgba(77,148,255,.10), transparent 60%),
+    linear-gradient(185deg, #14161f 0%, #0c0e15 100%);
+  border-right: 1px solid rgba(255,255,255,.06);
+  box-shadow: 14px 0 40px rgba(0,0,0,.34);
+}
+
+/* ── Logo header ── */
+.sidebar-logo {
+  padding: 22px 20px 18px !important;
+  border-bottom: 1px solid rgba(255,255,255,.06) !important;
+}
+.sidebar-logo .app-logo {
+  width: 38px !important; height: 38px !important;
+  border-radius: 11px !important;
+  padding: 0;
+  box-shadow: 0 4px 14px rgba(77,148,255,.4), 0 0 0 1px rgba(255,255,255,.10) inset;
+}
+.sidebar-logo > div:first-child { line-height: 1.1; }
+.sidebar-logo span {
+  font-size: 10.5px !important;
+  letter-spacing: .3px;
+  color: var(--text3) !important;
+  margin-top: 5px !important;
+}
+
+/* ── Nhóm menu ── */
+.sidebar-nav { padding: 14px 12px !important; overflow-y: auto; }
+.nav-group-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--text3);
+  padding: 4px 12px;
+  margin: 14px 0 6px;
+}
+.nav-group-label:first-child { margin-top: 2px; }
+
+/* ── Mục menu ── */
+.nav-item {
+  gap: 12px !important;
+  padding: 9px 12px !important;
+  border-radius: 12px !important;
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  margin-bottom: 3px !important;
+  position: relative;
+  overflow: hidden;
+}
+.nav-item::before { display: none; }  /* bỏ vạch cũ */
+
+/* icon nằm trong ô bo tròn */
+.nav-ico {
+  flex-shrink: 0;
+  display: grid; place-items: center;
+  width: 32px; height: 32px;
+  border-radius: 9px;
+  background: rgba(255,255,255,.045);
+  border: 1px solid rgba(255,255,255,.06);
+  color: var(--text2);
+  transition: background .22s var(--ease), color .22s var(--ease), transform .22s var(--ease);
+}
+.nav-ico svg { width: 16px; height: 16px; }
+.nav-txt { flex: 1; }
+
+.nav-item:hover { background: rgba(255,255,255,.05); transform: none; }
+.nav-item:hover .nav-ico { background: rgba(255,255,255,.09); color: var(--text); transform: scale(1.06); }
+
+/* mục đang mở: nền gradient + icon sáng + chấm bên phải */
+.nav-item.active {
+  background: linear-gradient(100deg, rgba(77,148,255,.22), rgba(77,148,255,.06)) !important;
+  border: 1px solid rgba(77,148,255,.30) !important;
+  color: #eaf2ff !important;
+  box-shadow: 0 4px 16px rgba(77,148,255,.20), inset 0 1px 0 rgba(255,255,255,.08);
+}
+.nav-item.active .nav-ico {
+  background: linear-gradient(140deg, var(--accent), var(--accent2));
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(77,148,255,.5);
+}
+.nav-item.active::after {
+  content: '';
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+}
+
+/* ── Thẻ người dùng dưới cùng ── */
+.sidebar-bottom { padding: 12px !important; border-top: 1px solid rgba(255,255,255,.06); }
+.user-badge {
+  padding: 11px 12px !important;
+  border-radius: 14px !important;
+  background: linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.015)) !important;
+  border: 1px solid rgba(255,255,255,.08);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+}
+.user-avatar {
+  width: 38px !important; height: 38px !important;
+  border-radius: 11px !important;
+  box-shadow: 0 3px 10px rgba(77,148,255,.36);
+}
+.user-name { font-size: 13.5px !important; font-weight: 700 !important; }
+
+/* ═══════════════════════════════════════════════════════════
+   KHUNG XEM THỬ BẢN ĐIỆN THOẠI
+   ═══════════════════════════════════════════════════════════ */
+.mb-overlay {
+  display: none;
+  position: fixed; inset: 0; z-index: 4000;
+  background: rgba(4,5,9,.78);
+  backdrop-filter: blur(12px) saturate(120%);
+  -webkit-backdrop-filter: blur(12px) saturate(120%);
+  align-items: center; justify-content: center;
+  padding: 20px;
+}
+.mb-overlay.open { display: flex; animation: ovIn .22s var(--ease) both; }
+
+.mb-panel {
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+  max-height: 100%;
+}
+.mb-bar {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  justify-content: center;
+  padding: 9px 10px 9px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.02));
+  box-shadow: var(--sh);
+}
+.mb-title {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 700; color: #cfe1ff; white-space: nowrap;
+}
+.mb-title svg { color: var(--accent); }
+
+.mb-sizes { display: flex; gap: 6px; flex-wrap: wrap; }
+.mb-size {
+  padding: 6px 12px;
+  border-radius: 99px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.04);
+  color: var(--text2);
+  font-family: var(--font); font-size: 12px; font-weight: 600;
+  cursor: pointer; white-space: nowrap;
+  transition: background .2s var(--ease), color .2s var(--ease), border-color .2s var(--ease);
+}
+.mb-size:hover { background: rgba(255,255,255,.09); color: var(--text); }
+.mb-size.active {
+  color: #fff;
+  border-color: rgba(77,148,255,.5);
+  background: linear-gradient(180deg, rgba(77,148,255,.30), rgba(77,148,255,.12));
+  box-shadow: 0 3px 12px rgba(77,148,255,.28);
+}
+.mb-close { padding: 7px 10px !important; }
+
+.mb-stage { display: grid; place-items: center; flex: 1; min-height: 0; }
+
+/* Khung máy: viền dày như điện thoại thật cho dễ hình dung */
+.mb-phone {
+  position: relative;
+  transform-origin: center top;
+  border-radius: 42px;
+  padding: 11px;
+  background: linear-gradient(160deg, #2a2f3d, #12141c);
+  border: 1px solid rgba(255,255,255,.13);
+  box-shadow: 0 30px 80px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.14);
+  flex-shrink: 0;
+}
+.mb-notch {
+  position: absolute; top: 17px; left: 50%; transform: translateX(-50%);
+  width: 92px; height: 21px; border-radius: 99px;
+  background: #0a0b10; z-index: 2; pointer-events: none;
+}
+.mb-phone iframe {
+  width: 100%; height: 100%;
+  border: 0; border-radius: 32px;
+  background: var(--bg);
+  display: block;
+}
+.mb-foot { font-size: 12px; color: var(--text3); font-family: var(--mono); }
+
+/* Nút mở khung xem thử — chỉ hiện trên máy tính, ở điện thoại thì vô nghĩa */
+.btn-xem-mb {
+  width: 100%;
+  margin-top: 10px;
+  padding: 9px;
+  border-radius: 10px;
+  border: 1px solid rgba(77,148,255,.26);
+  background: linear-gradient(180deg, rgba(77,148,255,.14), rgba(77,148,255,.05));
+  color: #cfe1ff;
+  font-family: var(--font); font-size: 12px; font-weight: 600;
+  cursor: pointer;
+  transition: background .2s var(--ease), border-color .2s var(--ease), transform .2s var(--ease);
+}
+.btn-xem-mb:hover {
+  background: linear-gradient(180deg, rgba(77,148,255,.24), rgba(77,148,255,.09));
+  border-color: rgba(77,148,255,.45);
+  transform: translateY(-1px);
+}
+@media (max-width: 768px) { .btn-xem-mb { display: none !important; } }
 
 /* Nút nổi (chat / ghi chú) nằm đè lên hộp thoại — ẩn đi khi đang mở form */
 body:has(.modal-overlay.open) #chat-fab-wrap,
@@ -2580,6 +2842,14 @@ body:has(.modal-overlay.open) #notes-fab-wrap {
   .modal-overlay { backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); }
   .img-slot:hover { transform: none; }
   .modal .section-card::after { height: 2px; }
+
+  /* Trên máy tính lưới ảnh được giãn đầy chiều cao cho kín form. Ở điện thoại
+     form cuộn dọc nên ép chiều cao sẽ bóp 2 hàng chồng lên nhau — trả về tự nhiên. */
+  #img-grid.img-grid-form { flex: none; min-height: auto; align-items: start; }
+  .img-grid-form .img-slot { min-height: 168px; }
+  .img-grid-form .img-preview { flex: none; height: 104px; min-height: 104px; }
+  .img-btn-row { gap: 6px; }
+  .img-btn { padding: 9px 4px; font-size: 12px; min-height: 38px; white-space: nowrap; }
 
   /* Ô "Model máy" nằm ở cột phải và khá hẹp — cho danh sách nở ngược sang TRÁI,
      không thì nở sang phải là lòi ra ngoài mép màn hình, che mất mã A. */
@@ -2662,30 +2932,35 @@ body:has(.modal-overlay.open) #notes-fab-wrap {
       </button>
     </div>
     <nav class="sidebar-nav">
+      <div class="nav-group-label">Quản lý</div>
       <div class="nav-item active" onclick="showPage('list')" id="nav-list">
-        <i data-lucide="clipboard-list" style="width:16px;height:16px;flex-shrink:0"></i> Danh sách phiếu
+        <span class="nav-ico"><i data-lucide="clipboard-list"></i></span><span class="nav-txt">Danh sách phiếu</span>
       </div>
       <div class="nav-item" onclick="showPage('stats')" id="nav-stats">
-        <i data-lucide="bar-chart-2" style="width:16px;height:16px;flex-shrink:0"></i> Thống kê
+        <span class="nav-ico"><i data-lucide="bar-chart-2"></i></span><span class="nav-txt">Thống kê</span>
       </div>
       <div class="nav-item" onclick="showPage('notes')" id="nav-notes">
-        <i data-lucide="notebook-pen" style="width:16px;height:16px;flex-shrink:0"></i> Ghi chú
+        <span class="nav-ico"><i data-lucide="notebook-pen"></i></span><span class="nav-txt">Ghi chú</span>
       </div>
+
+      <div class="nav-group-label">Công cụ</div>
       <div class="nav-item" onclick="showPage('panic'); initPanicPage();" id="nav-panic">
-        <i data-lucide="cpu" style="width:16px;height:16px;flex-shrink:0"></i> Đọc Panic Full
-      </div>
-      <div class="nav-item" onclick="showPage('accounts')" id="nav-accounts">
-        <i data-lucide="users" style="width:16px;height:16px;flex-shrink:0"></i> Tài khoản
-      </div>
-      <div class="nav-item" onclick="showPage('settings')" id="nav-settings">
-        <i data-lucide="settings" style="width:16px;height:16px;flex-shrink:0"></i> Cài đặt
+        <span class="nav-ico"><i data-lucide="cpu"></i></span><span class="nav-txt">Đọc Panic Full</span>
       </div>
       <div class="nav-item" onclick="showPage('chat')" id="nav-chat">
-        <i data-lucide="message-circle" style="width:16px;height:16px;flex-shrink:0"></i> Chat nội bộ
+        <span class="nav-ico"><i data-lucide="message-circle"></i></span><span class="nav-txt">Chat nội bộ</span>
         <span class="chat-badge" id="chat-badge-sidebar"></span>
       </div>
       <div class="nav-item" onclick="showPage('ticket-history')" id="nav-ticket-history">
-        <i data-lucide="history" style="width:16px;height:16px;flex-shrink:0"></i> Lịch sử chỉnh sửa phiếu
+        <span class="nav-ico"><i data-lucide="history"></i></span><span class="nav-txt">Lịch sử chỉnh sửa</span>
+      </div>
+
+      <div class="nav-group-label">Hệ thống</div>
+      <div class="nav-item" onclick="showPage('accounts')" id="nav-accounts">
+        <span class="nav-ico"><i data-lucide="users"></i></span><span class="nav-txt">Tài khoản</span>
+      </div>
+      <div class="nav-item" onclick="showPage('settings')" id="nav-settings">
+        <span class="nav-ico"><i data-lucide="settings"></i></span><span class="nav-txt">Cài đặt</span>
       </div>
     </nav>
     <div class="sidebar-bottom">
@@ -2696,7 +2971,31 @@ body:has(.modal-overlay.open) #notes-fab-wrap {
           <div class="user-role">Quản trị viên</div>
         </div>
       </div>
+      <button class="btn-xem-mb" id="btn-xem-mobile" onclick="moXemMobile()">
+        <i data-lucide="smartphone" style="width:13px;height:13px;margin-right:5px;vertical-align:middle"></i>Xem bản điện thoại
+      </button>
       <button class="btn-logout" onclick="doLogout()"><i data-lucide="log-out" style="width:13px;height:13px;margin-right:5px;vertical-align:middle"></i>Đăng xuất</button>
+    </div>
+  </div>
+
+  <!-- Khung xem thử bản điện thoại: nạp lại chính app này trong một khung hẹp,
+       nên mọi quy tắc giao diện cho màn nhỏ tự động áp dụng — giống hệt máy thật. -->
+  <div class="mb-overlay" id="mb-overlay" onclick="if(event.target===this) dongXemMobile()">
+    <div class="mb-panel">
+      <div class="mb-bar">
+        <div class="mb-title"><i data-lucide="smartphone" style="width:15px;height:15px"></i> Xem thử bản điện thoại</div>
+        <div class="mb-sizes" id="mb-sizes"></div>
+        <button class="btn btn-ghost mb-close" onclick="dongXemMobile()" title="Đóng (Esc)">
+          <i data-lucide="x" style="width:15px;height:15px"></i>
+        </button>
+      </div>
+      <div class="mb-stage">
+        <div class="mb-phone" id="mb-phone">
+          <div class="mb-notch"></div>
+          <iframe id="mb-frame" title="Bản điện thoại"></iframe>
+        </div>
+      </div>
+      <div class="mb-foot" id="mb-foot"></div>
     </div>
   </div>
 
@@ -4990,6 +5289,18 @@ const IMG_SLOTS = [
   { attr: 'repair_images', label: 'Ảnh sửa' },
 ];
 
+// Bộ lọc nhanh theo trạng thái. CŨNG phải khai báo trước loadStorage()/initApp()
+// vì renderTable() chạy ngay lúc mở app và có gọi tới — để dưới là app chết ngay
+// từ lúc khởi động, bảng đứng nguyên bản tĩnh và không hiện hàng chip.
+let statusFilter = 'all';
+const STATUS_CHIPS = [
+  { key: 'all',           label: 'Tất cả',        icon: 'layers',         color: 'var(--accent)' },
+  { key: 'Đang sửa',      label: 'Đang sửa',      icon: 'wrench',         color: 'var(--accent)' },
+  { key: 'Chờ linh kiện', label: 'Chờ linh kiện', icon: 'package',        color: 'var(--yellow)' },
+  { key: 'Hoàn thành',    label: 'Hoàn thành',    icon: 'check-circle-2', color: 'var(--green)'  },
+  { key: 'Còn nợ',        label: 'Còn nợ',        icon: 'wallet',         color: 'var(--pink)'   },
+];
+
 function loadStorage() {
   try {
     const d = localStorage.getItem('suachua_db');
@@ -5541,7 +5852,17 @@ function showAppScreen(user) {
 
 // Auto-login neu da ghi nho
 const SKIP_LOGIN_SCREEN = true; // Chỉ 1 mình dùng nên tạm bỏ màn đăng nhập — đổi lại false để bật lại
-(async function checkAutoLogin() {
+
+// Chờ trang nạp xong rồi mới khởi động app.
+// Lý do: initApp() dùng nhiều hằng số (STATUS_CHIPS, ROLE_LABEL, IMG_SLOTS…) khai báo
+// ở phía dưới file. Chạy ngay tại đây là chúng chưa tồn tại -> initApp chết giữa chừng,
+// bảng đứng nguyên bản tĩnh, không hiện chip, không tự đồng bộ — phải bấm "Đồng bộ" mới lên.
+function khoiDongApp(fn) {
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn, { once: true });
+  else fn();
+}
+
+khoiDongApp(async function checkAutoLogin() {
   try {
     if (SKIP_LOGIN_SCREEN) {
       const adminUser = AUTH.users.find(u => u.username === 'admin')
@@ -5626,7 +5947,7 @@ const SKIP_LOGIN_SCREEN = true; // Chỉ 1 mình dùng nên tạm bỏ màn đă
   } catch(e) {
     showLoginScreen();
   }
-})();
+});
 
 // ══════ LOGIN ══════
 document.getElementById('inp-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
@@ -6494,18 +6815,18 @@ function handleImageInput(e) {
       const img = new Image();
       img.onload = () => {
         try {
+          // KHÔNG tự xoay theo EXIF nữa. Trình duyệt đời mới (Chrome 81+, Safari 13.4+,
+          // Firefox 78+) đã tự xoay ảnh theo EXIF khi nạp vào <img> — img.naturalWidth/Height
+          // là kích thước ĐÃ xoay. Xoay tay thêm lần nữa là xoay 2 lần, ảnh dọc thành nằm ngang.
           const MAX = 1400;
-          let w = img.width, h = img.height;
+          let w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
           if (w > MAX || h > MAX) {
             if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
             else { w = Math.round(w * MAX / h); h = MAX; }
           }
-          const orientation = getExifOrientation(original);
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
-          if (orientation >= 5 && orientation <= 8) { canvas.width = h; canvas.height = w; }
-          else { canvas.width = w; canvas.height = h; }
-          applyExifTransform(ctx, orientation, w, h);
+          canvas.width = w; canvas.height = h;
           ctx.drawImage(img, 0, 0, w, h);
           const compressed = canvas.toDataURL('image/jpeg', 0.86);
           imgStore[attr].push({ name: 'photo.jpg', data: compressed });
@@ -6659,7 +6980,13 @@ function refreshPreview(attr) {
   if (imgs && imgs.length > 0) {
     const first = imgs[0];
     const src = driveThumb(first.data || first.url || '');
-    prev.innerHTML = src ? `<img src="${src}" alt="" onerror="this.parentElement.innerHTML='<span class=img-preview-empty>📷</span>'">` : `<span class="img-preview-empty">📷</span>`;
+    prev.innerHTML = src
+      ? `<img src="${src}" alt="" onerror="this.parentElement.innerHTML='<span class=img-preview-empty>📷</span>'">
+         <button type="button" class="img-rotate-btn" onclick="event.stopPropagation();rotateSlotImages('${attr}')" title="Xoay ảnh 90° (bấm nhiều lần cho đúng hướng)">
+           <i data-lucide="rotate-cw" style="width:15px;height:15px"></i>
+         </button>`
+      : `<span class="img-preview-empty">📷</span>`;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
     // Badge: phân biệt ảnh mới (chưa upload) vs đã lên Drive
     const newCount = imgs.filter(i => i.data).length;
     const driveCount = imgs.filter(i => i.url).length;
@@ -6671,6 +6998,57 @@ function refreshPreview(attr) {
     prev.innerHTML = `<span class="img-preview-empty">📷</span>`;
     cnt.innerHTML = '';
   }
+}
+
+// ══════ XOAY ẢNH VÀ LƯU THẬT ══════
+// Cho ảnh cũ đã bị lưu nằm ngang trên Drive (thời app còn xoay sai) — hoặc bất kỳ
+// ảnh nào chụp bị lệch. Mỗi lần bấm xoay 90° theo chiều kim đồng hồ; xoay xong ảnh
+// biến thành ảnh mới (base64) nên khi bấm Lưu/Cập nhật sẽ đẩy bản đúng hướng lên Drive.
+function xoayAnh90(src) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';   // để tải được ảnh Drive về canvas
+    img.onload = () => {
+      try {
+        const w = img.naturalWidth || img.width;
+        const h = img.naturalHeight || img.height;
+        const c = document.createElement('canvas');
+        c.width = h; c.height = w;    // xoay 90° thì đảo ngang–dọc
+        const ctx = c.getContext('2d');
+        ctx.translate(h / 2, w / 2);
+        ctx.rotate(Math.PI / 2);     // 90° theo chiều kim đồng hồ
+        ctx.drawImage(img, -w / 2, -h / 2);
+        resolve(c.toDataURL('image/jpeg', 0.86));
+      } catch (e) { resolve(null); } // canvas bị chặn
+    };
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+
+let _dangXoay = false;
+async function rotateSlotImages(attr) {
+  if (_dangXoay) return;
+  const arr = imgStore[attr] || [];
+  if (!arr.length) { toast('Ô này chưa có ảnh để xoay', 'info'); return; }
+  _dangXoay = true;
+  const prev = document.getElementById('prev-' + attr);
+  if (prev) prev.style.opacity = '.45';
+
+  let loi = 0;
+  for (let i = 0; i < arr.length; i++) {
+    const src = arr[i].data || (arr[i].url ? driveThumb(arr[i].url) : '');
+    if (!src) continue;
+    const xoay = await xoayAnh90(src);
+    if (xoay) arr[i] = { name: 'photo.jpg', data: xoay };  // thành ảnh mới → sẽ lưu lại
+    else loi++;
+  }
+
+  if (prev) prev.style.opacity = '';
+  refreshPreview(attr);
+  _dangXoay = false;
+  if (loi) toast('Không xoay được ảnh (bị chặn tải về). Thử xóa rồi chụp lại.', 'error');
+  else toast('Đã xoay — nhớ bấm Lưu / Cập nhật để lưu lại', 'success');
 }
 function openViewer(attr) {
   const imgs = imgStore[attr];
@@ -7004,15 +7382,15 @@ function renderTable(tickets) {
       <td>
         <div class="cel-kh">
           <span class="kh-ava">${chuCai}</span>
-          <div>
+          <div class="cel-kh-txt">
             <div class="cel-ten">${tenKH}</div>
-            <div class="cel-sub mono">${t.phone || '—'}</div>
+            ${t.phone ? `<div class="cel-sub mono">${t.phone}</div>` : ''}
           </div>
         </div>
       </td>
       <td>
         <div class="cel-may">${may}</div>
-        <div class="cel-sub mono">${t.imei || '—'}</div>
+        ${t.imei ? `<div class="cel-sub mono">${t.imei}</div>` : ''}
       </td>
       <td class="cel-loi">${isSale ? `Bán máy (BH: ${t.notes_warranty || 'Không'})` : (t.problem || '—')}</td>
       <td class="cel-tien">${(t.total||0).toLocaleString('vi-VN')}<span>đ</span></td>
@@ -7086,21 +7464,91 @@ function clearSelection() {
 }
 
 // ══════ LỌC NHANH THEO TRẠNG THÁI ══════
-let statusFilter = 'all';
-
-const STATUS_CHIPS = [
-  { key: 'all',           label: 'Tất cả',       icon: 'layers',        color: 'var(--accent)' },
-  { key: 'Đang sửa',      label: 'Đang sửa',     icon: 'wrench',        color: 'var(--accent)' },
-  { key: 'Chờ linh kiện', label: 'Chờ linh kiện',icon: 'package',       color: 'var(--yellow)' },
-  { key: 'Hoàn thành',    label: 'Hoàn thành',   icon: 'check-circle-2',color: 'var(--green)'  },
-  { key: 'Còn nợ',        label: 'Còn nợ',       icon: 'wallet',        color: 'var(--pink)'   },
-];
+// (statusFilter và STATUS_CHIPS khai báo ở gần đầu file — xem ghi chú tại đó)
 
 function setStatusFilter(key) {
   statusFilter = key;
   clearSelection();
   renderTable(DB.tickets);
 }
+
+// ══════ XEM THỬ BẢN ĐIỆN THOẠI NGAY TRÊN MÁY TÍNH ══════
+// Nạp lại chính file này vào một khung hẹp. Vì khung có bề ngang riêng nên các
+// quy tắc "màn nhỏ" tự ăn — không phải nhân đôi giao diện, không lệch với máy thật.
+function cacKhoMay() {
+  return [
+    { ten: 'iPhone SE',      w: 375, h: 667 },
+    { ten: 'iPhone 14',      w: 390, h: 844 },
+    { ten: 'iPhone Pro Max', w: 430, h: 932 },
+    { ten: 'Máy tính bảng',  w: 768, h: 1024 },
+  ];
+}
+let khoMayDangXem = 1;
+
+function veNutKhoMay() {
+  const wrap = document.getElementById('mb-sizes');
+  if (!wrap) return;
+  wrap.innerHTML = cacKhoMay().map((m, i) =>
+    `<button class="mb-size${i === khoMayDangXem ? ' active' : ''}" onclick="doiKhoMay(${i})">${m.ten}</button>`
+  ).join('');
+}
+
+function apDungKhoMay() {
+  const m = cacKhoMay()[khoMayDangXem];
+  const phone = document.getElementById('mb-phone');
+  const foot  = document.getElementById('mb-foot');
+  if (!phone) return;
+  phone.style.width  = m.w + 'px';
+  phone.style.height = m.h + 'px';
+  // Máy cao quá màn hình thì thu nhỏ lại cho vừa, vẫn giữ đúng bề ngang giao diện
+  const caoToiDa = window.innerHeight - 210;
+  const tiLe = Math.min(1, caoToiDa / m.h);
+  phone.style.transform = `scale(${tiLe})`;
+  if (foot) {
+    foot.textContent = `${m.ten} — ${m.w} × ${m.h}` + (tiLe < 1 ? ` (thu nhỏ ${Math.round(tiLe*100)}% cho vừa màn hình)` : '');
+  }
+}
+
+function doiKhoMay(i) {
+  khoMayDangXem = i;
+  veNutKhoMay();
+  apDungKhoMay();
+}
+
+function moXemMobile() {
+  const ov = document.getElementById('mb-overlay');
+  const fr = document.getElementById('mb-frame');
+  if (!ov || !fr) return;
+  veNutKhoMay();
+  apDungKhoMay();
+  // Thêm dấu ?mb=1 để lát nữa nếu cần phân biệt "đang xem thử" thì có sẵn
+  if (!fr.getAttribute('src')) fr.src = location.pathname + '?mb=1';
+  ov.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function dongXemMobile() {
+  const ov = document.getElementById('mb-overlay');
+  if (!ov) return;
+  ov.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function taiLaiXemMobile() {
+  const fr = document.getElementById('mb-frame');
+  if (fr) fr.src = location.pathname + '?mb=1&t=' + Date.now();
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const ov = document.getElementById('mb-overlay');
+    if (ov && ov.classList.contains('open')) dongXemMobile();
+  }
+});
+window.addEventListener('resize', () => {
+  const ov = document.getElementById('mb-overlay');
+  if (ov && ov.classList.contains('open')) apDungKhoMay();
+});
 
 // Gỡ sạch mọi bộ lọc: trạng thái + ô tìm kiếm + khoảng thời gian
 function resetAllFilters() {
