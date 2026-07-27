@@ -1399,76 +1399,182 @@ body.logged-in .chat-fab-wrap { display: block; }
 }
 
 /* ══════ GHI CHÚ CÁ NHÂN ══════ */
-.notes-toolbar {
-  display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px;
+/* ══════ TRANG GHI CHÚ ══════ */
+.notes-hero {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  background: linear-gradient(135deg, rgba(59,140,237,.14), rgba(168,85,247,.10) 55%, rgba(16,185,129,.10));
+  border: 1px solid rgba(255,255,255,.08); border-radius: 18px;
+  padding: 16px 18px; margin-bottom: 16px;
+  box-shadow: 0 10px 34px rgba(0,0,0,.25);
 }
-.notes-search {
-  flex: 1; min-width: 200px; background: var(--bg3); border: 1px solid var(--border);
-  border-radius: 10px; padding: 10px 14px; color: var(--text); font-size: 13px;
-  font-family: var(--font); outline: none; transition: border-color 0.15s;
+.notes-hero-left { display: flex; align-items: center; gap: 13px; min-width: 0; }
+.notes-hero-icon {
+  width: 44px; height: 44px; flex-shrink: 0; border-radius: 14px; display: grid; place-items: center;
+  background: linear-gradient(140deg, var(--accent), #a855f7); color: #fff;
+  box-shadow: 0 8px 20px rgba(59,140,237,.4);
 }
-.notes-search:focus { border-color: var(--accent); }
+.notes-hero-title { font-size: 19px; font-weight: 800; color: var(--text); line-height: 1.15; }
+.notes-hero-sub { font-size: 12px; color: var(--text3); margin-top: 3px; }
+.notes-hero-sub strong { color: var(--accent); }
+.notes-stats { display: flex; gap: 10px; flex-wrap: wrap; }
+.notes-stat {
+  min-width: 74px; text-align: center; padding: 8px 12px; border-radius: 12px;
+  background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.07);
+}
+.notes-stat span { display: block; font-size: 17px; font-weight: 800; color: var(--text); line-height: 1.1; }
+.notes-stat small { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .5px; }
+
 .notes-composer {
-  background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius);
-  padding: 16px; margin-bottom: 18px;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+  position: relative; background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 16px; padding: 14px; margin-bottom: 14px;
+  box-shadow: 0 6px 26px rgba(0,0,0,.2); transition: border-color .18s, box-shadow .18s;
 }
-.notes-composer label {
-  display: block; font-size: 11px; font-weight: 700; color: var(--text3);
-  text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px;
-}
+.notes-composer:focus-within { border-color: rgba(59,140,237,.55); box-shadow: 0 8px 30px rgba(59,140,237,.18); }
 .notes-composer textarea {
-  width: 100%; min-height: 88px; max-height: 220px; resize: vertical;
-  background: var(--bg3); border: 1px solid var(--border); border-radius: 10px;
-  padding: 12px 14px; color: var(--text); font-family: var(--font); font-size: 13px;
-  line-height: 1.55; outline: none; transition: border-color 0.15s;
+  width: 100%; min-height: 62px; max-height: 260px; resize: none; overflow-y: auto;
+  background: transparent; border: none; padding: 2px 2px 8px;
+  color: var(--text); font-family: var(--font); font-size: 14px; line-height: 1.6; outline: none;
 }
-.notes-composer textarea:focus { border-color: rgba(59,140,237,0.65); }
-.notes-composer-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; align-items: center; }
-.notes-hint { font-size: 11px; color: var(--text3); flex: 1; min-width: 160px; }
-.notes-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(288px, 1fr)); gap: 12px;
+.notes-composer-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  border-top: 1px solid var(--border); padding-top: 10px;
 }
-.notes-card {
-  background: var(--bg2); border: 1px solid var(--border); border-radius: 12px;
-  padding: 12px 12px 10px; position: relative;
-  transition: border-color 0.18s, box-shadow 0.18s;
+.notes-count { font-size: 11px; color: var(--text3); font-family: var(--mono); }
+.notes-composer-right { display: flex; align-items: center; gap: 6px; }
+.desktop-only-inline { display: inline-flex; }
+@media (max-width: 768px) { .desktop-only-inline { display: none !important; } }
+.notes-kbd {
+  font-size: 10px; font-family: var(--mono); color: var(--text3);
+  border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 6px; padding: 2px 6px;
 }
-.notes-card:hover {
-  border-color: rgba(59,140,237,0.35);
-  box-shadow: 0 6px 22px rgba(0,0,0,0.22);
+.notes-add-btn {
+  display: inline-flex; align-items: center; gap: 6px; margin-left: 4px;
+  background: linear-gradient(135deg, var(--accent), #6d8dff); color: #fff; border: none;
+  border-radius: 10px; padding: 9px 16px; font-size: 13px; font-weight: 700; font-family: var(--font);
+  cursor: pointer; box-shadow: 0 6px 18px rgba(59,140,237,.35); transition: transform .12s, box-shadow .18s;
 }
-.notes-card.pinned {
-  border-color: rgba(251,191,36,0.4);
-  background: linear-gradient(160deg, rgba(251,191,36,0.07) 0%, var(--bg2) 48%);
+.notes-add-btn:hover { transform: translateY(-1px); box-shadow: 0 9px 24px rgba(59,140,237,.5); }
+.notes-add-btn:active { transform: scale(.97); }
+.notes-add-btn svg { width: 15px; height: 15px; }
+
+.notes-toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+.notes-search-wrap {
+  flex: 1; min-width: 210px; position: relative; display: flex; align-items: center;
 }
-.notes-card-meta {
-  display: flex; align-items: center; justify-content: space-between; gap: 6px;
-  margin-bottom: 8px;
+.notes-search-wrap > svg { position: absolute; left: 12px; width: 15px; height: 15px; color: var(--text3); pointer-events: none; }
+.notes-search {
+  width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: 11px;
+  padding: 10px 34px 10px 34px; color: var(--text); font-size: 13px; font-family: var(--font);
+  outline: none; transition: border-color .15s, background .15s;
 }
-.notes-card-time { font-size: 10px; color: var(--text3); font-family: var(--mono); }
-.notes-card-actions { display: flex; gap: 2px; align-items: center; }
-.notes-icon-btn {
+.notes-search:focus { border-color: var(--accent); background: var(--bg2); }
+.notes-search::-webkit-search-cancel-button { display: none; }
+.notes-search-clear {
+  position: absolute; right: 6px; background: none; border: none; color: var(--text3);
+  cursor: pointer; padding: 5px; border-radius: 8px; display: none; align-items: center;
+}
+.notes-search-clear svg { width: 14px; height: 14px; }
+.notes-search-clear:hover { color: var(--text); background: var(--bg3); }
+.notes-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.notes-chip {
+  background: var(--bg3); border: 1px solid var(--border); color: var(--text2);
+  border-radius: 999px; padding: 8px 14px; font-size: 12px; font-weight: 650; font-family: var(--font);
+  cursor: pointer; transition: all .15s;
+}
+.notes-chip:hover { color: var(--text); border-color: rgba(59,140,237,.4); }
+.notes-chip.active {
+  background: linear-gradient(135deg, rgba(59,140,237,.22), rgba(59,140,237,.1));
+  border-color: rgba(59,140,237,.55); color: var(--accent);
+}
+
+.notes-grid { columns: 3 280px; column-gap: 12px; }
+.ncard {
+  break-inside: avoid; -webkit-column-break-inside: avoid; page-break-inside: avoid;
+  display: block; margin: 0 0 12px; position: relative; overflow: hidden;
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 14px;
+  padding: 12px 13px 11px; transition: border-color .18s, box-shadow .18s, transform .18s;
+  animation: ncardIn .22s ease both;
+}
+@keyframes ncardIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.ncard::before {
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  background: var(--nc, var(--accent)); opacity: .9;
+}
+.ncard:hover { border-color: rgba(59,140,237,.4); box-shadow: 0 10px 28px rgba(0,0,0,.28); transform: translateY(-2px); }
+.ncard.pinned { border-color: rgba(251,191,36,.45); background: linear-gradient(165deg, rgba(251,191,36,.09), var(--bg2) 55%); }
+.ncard.pinned::before { background: var(--yellow); }
+.ncard-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 7px; }
+.ncard-time { font-size: 10.5px; color: var(--text3); font-family: var(--mono); display: flex; align-items: center; gap: 5px; }
+.ncard-time i, .ncard-time svg { width: 12px; height: 12px; }
+.ncard-tools { display: flex; gap: 1px; opacity: .45; transition: opacity .15s; }
+.ncard:hover .ncard-tools, .ncard.pinned .ncard-tools { opacity: 1; }
+.ncard-btn {
   background: transparent; border: none; color: var(--text3); cursor: pointer;
-  padding: 6px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center;
-  transition: background 0.12s, color 0.12s;
+  padding: 6px; border-radius: 8px; display: inline-flex; transition: background .12s, color .12s;
 }
-.notes-icon-btn:hover { background: var(--bg3); color: var(--text); }
-.notes-icon-btn.notes-pin-active { color: var(--yellow); background: rgba(251,191,36,0.12); }
-.notes-icon-btn.notes-del:hover { color: var(--red); background: rgba(239,68,68,0.1); }
-.notes-body {
-  width: 100%; min-height: 76px; background: transparent; border: none;
-  color: var(--text); font-size: 13px; line-height: 1.55; resize: vertical;
-  font-family: var(--font); outline: none; padding: 0;
-  white-space: pre-wrap; word-break: break-word;
+.ncard-btn svg { width: 14px; height: 14px; }
+.ncard-btn:hover { background: var(--bg3); color: var(--text); }
+.ncard-btn.on { color: var(--yellow); background: rgba(251,191,36,.14); }
+.ncard-btn.del:hover { color: var(--red); background: rgba(239,68,68,.12); }
+.ncard-title {
+  font-size: 14.5px; font-weight: 800; color: var(--text); line-height: 1.35;
+  margin-bottom: 5px; word-break: break-word; cursor: text;
 }
+.ncard-title:empty { display: none; }
+.ncard-edit-title {
+  width: 100%; margin-bottom: 6px; background: var(--bg3);
+  border: 1px solid rgba(59,140,237,.5); border-radius: 10px; padding: 8px 10px;
+  color: var(--text); font-family: var(--font); font-size: 14px; font-weight: 700; outline: none;
+}
+.notes-title-input {
+  width: 100%; background: transparent; border: none; outline: none; padding: 2px 2px 6px;
+  color: var(--text); font-family: var(--font); font-size: 15px; font-weight: 750;
+  border-bottom: 1px solid var(--border); margin-bottom: 8px;
+}
+.notes-title-input::placeholder { color: var(--text3); font-weight: 600; }
+.ncard-body {
+  font-size: 13.5px; line-height: 1.6; color: var(--text); white-space: pre-wrap;
+  word-break: break-word; cursor: text; min-height: 22px;
+}
+.ncard-body a { color: var(--accent); text-decoration: none; border-bottom: 1px dashed rgba(59,140,237,.5); }
+.ncard-body a:hover { border-bottom-style: solid; }
+.ncard-body mark { background: rgba(251,191,36,.3); color: var(--text); border-radius: 3px; padding: 0 2px; }
+.ncard-edit {
+  width: 100%; min-height: 74px; background: var(--bg3); border: 1px solid rgba(59,140,237,.5);
+  border-radius: 10px; padding: 9px 10px; color: var(--text); font-family: var(--font);
+  font-size: 13.5px; line-height: 1.6; outline: none; resize: vertical;
+}
+.ncard-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 9px; }
+.ntag {
+  display: inline-flex; align-items: center; gap: 4px; text-decoration: none;
+  font-size: 10.5px; font-weight: 650; padding: 3px 8px; border-radius: 999px;
+  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08); color: var(--text2);
+  cursor: pointer; font-family: var(--font);
+}
+.ntag:hover { color: var(--text); border-color: rgba(59,140,237,.45); }
+.ntag svg { width: 11px; height: 11px; }
+
 .notes-empty {
-  text-align: center; color: var(--text3); padding: 40px 20px; font-size: 13px;
-  line-height: 1.85; border: 1px dashed var(--border); border-radius: 12px; background: var(--bg2);
+  text-align: center; color: var(--text3); padding: 44px 20px; font-size: 13px; line-height: 1.9;
+  border: 1px dashed var(--border); border-radius: 16px; background: var(--bg2);
 }
+.notes-empty-ico {
+  width: 54px; height: 54px; margin: 0 auto 12px; border-radius: 16px; display: grid; place-items: center;
+  background: linear-gradient(140deg, rgba(59,140,237,.18), rgba(168,85,247,.12));
+  border: 1px solid rgba(59,140,237,.22); color: var(--accent);
+}
+.notes-empty-ico svg { width: 26px; height: 26px; }
+
+@media (max-width: 900px) { .notes-grid { columns: 2 250px; } }
 @media (max-width: 640px) {
-  .notes-grid { grid-template-columns: 1fr; }
-  .notes-composer-actions .notes-hint { flex-basis: 100%; }
+  .notes-grid { columns: 1; }
+  .notes-hero { padding: 14px; }
+  .notes-hero-title { font-size: 17px; }
+  .notes-stats { width: 100%; }
+  .notes-stat { flex: 1; min-width: 0; }
+  .notes-toolbar { gap: 8px; }
+  .notes-chips { width: 100%; }
+  .notes-chip { flex: 1; text-align: center; padding: 8px 6px; }
 }
 
 /* Popup chat */
@@ -2513,64 +2619,112 @@ input:focus, select:focus, textarea:focus,
   #page-list .table-wrap { border: none; background: none; box-shadow: none; overflow: visible; }
   #page-list .tbl { border-collapse: separate; border-spacing: 0; }
   #page-list .tbl thead { display: none; }
-  #page-list .tbl tbody { display: flex; flex-direction: column; gap: 10px; }
+  #page-list .tbl { width: 100%; max-width: 100%; }
+  #page-list .tbl tbody { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 100%; }
 
   #page-list .tbl tbody tr {
     display: grid;
-    grid-template-columns: auto 1fr auto;
+    /* min-content: mỗi cột luôn được đủ chỗ tối thiểu nên không bao giờ đè lên cột bên cạnh */
+    grid-template-columns: minmax(min-content, 1fr) minmax(min-content, max-content);
+    justify-content: space-between;
+    position: relative;
     grid-template-areas:
-      "chk   phieu  trang"
-      "khach khach  khach"
-      "may   may    may"
-      "loi   loi    tien";
+      "phieu khach"
+      "may   trang"
+      "loi   loi";
+    -webkit-touch-callout: none;
     align-items: center;
-    gap: 0;
-    padding: 12px 14px 10px;
+    gap: 10px 7px;
+    padding: 14px 10px 12px;
     border: 1px solid rgba(255,255,255,.075);
-    border-radius: 15px;
-    background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.012));
-    box-shadow: 0 4px 16px rgba(0,0,0,.28);
+    border-radius: 16px;
+    background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015));
+    box-shadow: 0 5px 20px rgba(0,0,0,.3);
   }
   #page-list .tbl tbody tr:hover,
   #page-list .tbl tbody tr.selected {
-    box-shadow: 0 4px 16px rgba(0,0,0,.28), inset 0 0 0 1.6px var(--accent);
-    background: linear-gradient(180deg, rgba(77,148,255,.14), rgba(77,148,255,.03));
+    box-shadow: 0 5px 20px rgba(0,0,0,.3), inset 0 0 0 1.6px var(--accent);
+    background: linear-gradient(180deg, rgba(77,148,255,.16), rgba(77,148,255,.04));
   }
-  #page-list .tbl tbody td { display: block; padding: 0 !important; border: none; }
+  #page-list .tbl tbody td { display: block; padding: 0 !important; border: none; min-width: 0; margin: 0; text-align: left; }
 
-  /* Hàng 1: ô tick · số phiếu + loại · trạng thái */
-  #page-list .tbl tbody td:nth-child(1) { grid-area: chk; padding-right: 10px !important; }
+  /* Gán khu vực lưới cho từng ô */
+  #page-list .tbl tbody td:nth-child(1) { display: none; }   /* bỏ ô tick — dùng nhấn giữ để chọn nhiều */
+
+  /* ── Chế độ chọn nhiều: nhấn giữ 1 phiếu để bật ── */
+  body.multi-select #page-list .tbl tbody tr { padding-bottom: 34px; user-select: none; -webkit-user-select: none; }
+  body.multi-select #page-list .tbl tbody tr::after {
+    content: ""; position: absolute; right: 12px; bottom: 10px;
+    width: 20px; height: 20px; border-radius: 50%;
+    border: 2px solid var(--text3); box-sizing: border-box;
+  }
+  body.multi-select #page-list .tbl tbody tr:not(.msel) { opacity: .72; }
+  #page-list .tbl tbody tr.msel {
+    box-shadow: 0 0 0 2px var(--accent), 0 6px 24px rgba(77,148,255,.4) !important;
+    background: linear-gradient(180deg, rgba(77,148,255,.22), rgba(77,148,255,.07)) !important;
+  }
+  body.multi-select #page-list .tbl tbody tr.msel::after {
+    content: "✓"; background: var(--accent); border-color: var(--accent);
+    color: #fff; font-size: 13px; font-weight: 800; line-height: 16px; text-align: center;
+  }
   #page-list .tbl tbody td:nth-child(2) { grid-area: phieu; }
-  #page-list .tbl tbody td:nth-child(7) { grid-area: trang; text-align: right; }
+  #page-list .tbl tbody td:nth-child(3) { grid-area: khach; }
+  #page-list .tbl tbody td:nth-child(7) { grid-area: trang; text-align: right; align-self: center; }
+  
+  #page-list .tbl tbody td:nth-child(4) { grid-area: may; align-self: start; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  #page-list .tbl tbody td:nth-child(5) { grid-area: loi; align-self: start; }
+  #page-list .tbl tbody td:nth-child(6) { display: none; }
 
-  /* Hàng 2 & 3: khách hàng và máy — cùng thụt 27px cho thẳng một rãnh với số phiếu */
-  #page-list .tbl tbody td:nth-child(3) { grid-area: khach; padding: 11px 0 0 27px !important; }
-  #page-list .tbl tbody td:nth-child(4) { grid-area: may;   padding: 9px 0 0 27px !important; }
-
-  /* Hàng 3: chân thẻ — lỗi báo bên trái, tiền bên phải */
-  #page-list .tbl tbody td:nth-child(5) {
-    grid-area: loi;
-    padding: 9px 8px 0 27px !important;   /* thụt cho thẳng rãnh với các hàng trên */
-    margin-top: 10px;
-    border-top: 1px solid rgba(255,255,255,.07);
-  }
-  #page-list .tbl tbody td:nth-child(6) {
-    grid-area: tien;
-    padding: 9px 0 0 0 !important;
-    margin-top: 10px;
-    border-top: 1px solid rgba(255,255,255,.07);
-    text-align: right;
-  }
-
+  /* Tăng font size tất cả để co giãn chữ lấp đầy khoảng trống */
   #page-list .tbl tbody .cel-phieu  { gap: 8px; }
-  #page-list .tbl tbody .cel-id     { font-size: 14px; }
-  #page-list .tbl tbody .cel-tien   { font-size: 15.5px; }
-  #page-list .tbl tbody .cel-ten    { font-size: 14px; }
-  #page-list .tbl tbody .cel-may    { font-size: 12.5px; color: var(--text2); font-weight: 600; }
-  #page-list .tbl tbody .cel-loi    { max-width: none; font-size: 12.5px; }
-  #page-list .tbl tbody .kh-ava     { width: 34px; height: 34px; font-size: 11px; }
-  #page-list .tbl tbody .cel-kh     { gap: 10px; align-items: center; }
-  #page-list .tbl tbody input[type=checkbox] { width: 17px; height: 17px; }
+  #page-list .tbl tbody .cel-id     { font-size: 16px; font-weight: 700; letter-spacing: 0.3px; }
+  #page-list .tbl tbody .cel-sub    { font-size: 11px; margin-top: 3px; line-height: 1.3; color: var(--text3); }
+  #page-list .tbl tbody .cel-tien   { font-size: 15.5px; font-weight: 750; color: var(--text); white-space: normal; overflow-wrap: anywhere; }
+  #page-list .tbl tbody .cel-ten    { font-size: 15px; font-weight: 650; line-height: 1.3; white-space: normal; overflow-wrap: break-word; }
+  
+  #page-list .tbl tbody .cel-may    { font-size: 15px; color: var(--accent); font-weight: 700; white-space: normal; overflow-wrap: break-word; letter-spacing: 0.2px; }
+  
+  /* Tạo style nổi bật cho thẻ IMEI và thêm chữ IMEI: */
+  #page-list .tbl tbody td:nth-child(4) .cel-sub {
+    font-size: 12px; color: var(--text2); background: rgba(255,255,255,.08);
+    padding: 4px 8px; border-radius: 6px; 
+    display: block; width: fit-content; 
+    margin: 0;
+    border: 1px solid rgba(255,255,255,.06);
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    max-width: 100%; overflow: hidden;
+  }
+  #page-list .tbl tbody td:nth-child(4) .cel-sub::before {
+    content: "IMEI: ";
+    opacity: 0.6;
+    font-weight: 600;
+  }
+
+  #page-list .tbl tbody .cel-loi    { font-size: 14.5px; color: var(--text2); white-space: normal; overflow-wrap: break-word; max-width: none; overflow: visible; text-align: justify; text-justify: inter-word; line-height: 1.45; }
+  #page-list .tbl tbody .kh-ava     { width: 32px; height: 32px; font-size: 12px; border-radius: 10px; flex-shrink: 0; }
+  #page-list .tbl tbody .cel-kh     { gap: 9px; align-items: center; overflow: visible; }
+  #page-list .tbl tbody .cel-kh-txt { overflow: visible; min-width: 0; }
+  #page-list .tbl tbody .cel-sub    { white-space: nowrap; }
+  #page-list .tbl tbody input[type=checkbox] { width: 20px; height: 20px; }
+  
+  /* Phóng to Status Badge trong bảng */
+  #page-list .tbl tbody .badge { padding: 5px 9px; font-size: 11.5px; border-radius: 8px; white-space: normal; }
+
+  /* Máy màn hình rất nhỏ (≤360px): bóp gọn thêm để thẻ luôn vừa khít, không tràn */
+  @media (max-width: 360px) {
+    #page-list .tbl tbody tr      { padding: 12px 8px 10px; gap: 9px 5px; }
+    #page-list .tbl tbody .cel-id { font-size: 15px; }
+    #page-list .tbl tbody .cel-sub{ font-size: 10.5px; }
+    #page-list .tbl tbody .cel-ten,
+    #page-list .tbl tbody .cel-may{ font-size: 13.5px; }
+    #page-list .tbl tbody .cel-loi{ font-size: 13px; }
+    #page-list .tbl tbody .cel-tien { font-size: 14px; }
+    #page-list .tbl tbody .kh-ava { width: 28px; height: 28px; font-size: 11px; border-radius: 9px; }
+    #page-list .tbl tbody .cel-kh { gap: 7px; }
+    #page-list .tbl tbody .badge  { padding: 4px 7px; font-size: 11px; white-space: normal; }
+    #page-list .tbl tbody td:nth-child(4) .cel-sub { font-size: 11px; }
+  }
 
   /* Màn hình trống nằm trong 1 ô -> bỏ kiểu thẻ đi cho nó chiếm hết bề ngang */
   #page-list .tbl tbody tr.empty-row {
@@ -2578,17 +2732,19 @@ input:focus, select:focus, textarea:focus,
   }
 
   #page-list.active { min-height: auto; }
-  .status-chips { gap: 7px; margin: 13px 0 2px; overflow-x: auto; flex-wrap: nowrap;
+  .status-chips { gap: 6px; margin: 10px 0 2px; overflow-x: auto; flex-wrap: nowrap;
                   padding-bottom: 4px; scrollbar-width: none; }
   .status-chips::-webkit-scrollbar { display: none; }
-  .chip { padding: 7px 12px 7px 10px; font-size: 12px; }
+  .chip { padding: 6px 10px 6px 9px; font-size: 11.5px; }
   .chip:hover { transform: none; }
-  .sel-bar { padding: 10px 12px; }
+  .sel-bar { padding: 8px 10px; }
   .sel-bar-actions { width: 100%; }
   .sel-bar-actions .btn { flex: 1; }
   .btn-add-main { width: 100%; }
-  .empty-state { padding: 44px 16px 48px; }
+  .empty-state { padding: 36px 14px 40px; }
 }
+
+
 
 /* ═══════════════════════════════════════════════════════════
    SIDEBAR 2.0 — thiết kế lại
@@ -2799,6 +2955,17 @@ input:focus, select:focus, textarea:focus,
   transform: translateY(-1px);
 }
 @media (max-width: 768px) { .btn-xem-mb { display: none !important; } }
+
+/* ══════ TẠM ẨN NÚT NỔI (chưa dùng tới) ══════
+   Điện thoại: ẩn cả 2 nút (chat + ghi chú).
+   Máy tính:   ẩn bong bóng chat, giữ nút ghi chú.
+   Muốn bật lại thì xóa cả khối này. */
+@media (max-width: 768px) {
+  #chat-fab-wrap, #notes-fab-wrap { display: none !important; }
+}
+@media (min-width: 769px) {
+  #chat-fab-wrap { display: none !important; }
+}
 
 /* Nút nổi (chat / ghi chú) nằm đè lên hộp thoại — ẩn đi khi đang mở form */
 body:has(.modal-overlay.open) #chat-fab-wrap,
@@ -3023,8 +3190,8 @@ body:has(.modal-overlay.open) #notes-fab-wrap {
       <div class="mobile-search">
         <span style="color:var(--text3)">🔍</span>
         <input type="text" id="mobile-search-input" placeholder="Tìm tên KH, SĐT, IMEI..." oninput="filterTable(this.value)">
-        <button type="button" class="btn-scan-imei mobile-only" onclick="startBarcodeScan('mobile-search-input')" title="Quét mã vạch" style="background:none; border:none; padding:0 5px; margin:0; color:var(--accent); cursor:pointer; display:flex; align-items:center;">
-          <i data-lucide="scan-barcode" style="width:18px;height:18px"></i>
+        <button type="button" class="btn-scan-imei mobile-only" onclick="scanImeiToSearch('mobile-search-input')" title="Chụp ảnh để tự tìm theo IMEI" style="background:none; border:none; padding:0 5px; margin:0; color:var(--accent); cursor:pointer; display:flex; align-items:center;">
+          <i data-lucide="camera" style="width:18px;height:18px"></i>
         </button>
       </div>
 
@@ -3071,8 +3238,8 @@ body:has(.modal-overlay.open) #notes-fab-wrap {
         <div class="search-wrap">
           <span style="color:var(--text3)">🔍</span>
           <input type="text" id="desktop-search-input" placeholder="Tìm tên KH, SĐT, IMEI..." oninput="filterTable(this.value)">
-          <button type="button" class="btn-scan-imei mobile-only" onclick="startBarcodeScan('desktop-search-input')" title="Quét mã vạch" style="background:none; border:none; padding:0 5px; margin:0; color:var(--accent); cursor:pointer; display:flex; align-items:center;">
-            <i data-lucide="scan-barcode" style="width:18px;height:18px"></i>
+          <button type="button" class="btn-scan-imei mobile-only" onclick="scanImeiToSearch('desktop-search-input')" title="Chụp ảnh để tự tìm theo IMEI" style="background:none; border:none; padding:0 5px; margin:0; color:var(--accent); cursor:pointer; display:flex; align-items:center;">
+            <i data-lucide="camera" style="width:18px;height:18px"></i>
           </button>
         </div>
       </div>
@@ -3116,26 +3283,56 @@ body:has(.modal-overlay.open) #notes-fab-wrap {
 
     <!-- PAGE: GHI CHÚ CÁ NHÂN -->
     <div class="page" id="page-notes">
-      <div class="page-title"><i data-lucide="notebook-pen" style="width:20px;height:20px;vertical-align:middle;margin-right:8px"></i>Ghi chú</div>
-      <div class="page-sub">Dùng được với mọi vai trò. Chỉ thấy ghi chú của <strong id="notes-user-label">@…</strong> — được tự động đồng bộ hóa trên Google Sheets.</div>
-
-      <div class="notes-toolbar">
-        <input type="search" class="notes-search" id="notes-search" placeholder="Tìm trong ghi chú…" autocomplete="off" oninput="renderPersonalNotesList()">
+      <div class="notes-hero">
+        <div class="notes-hero-left">
+          <div class="notes-hero-icon"><i data-lucide="notebook-pen" style="width:22px;height:22px"></i></div>
+          <div>
+            <div class="notes-hero-title">Ghi chú</div>
+            <div class="notes-hero-sub">Riêng của <strong id="notes-user-label">@…</strong> · tự đồng bộ Google Sheets</div>
+          </div>
+        </div>
+        <div class="notes-stats">
+          <div class="notes-stat"><span id="notes-stat-total">0</span><small>ghi chú</small></div>
+          <div class="notes-stat"><span id="notes-stat-pinned">0</span><small>đã ghim</small></div>
+          <div class="notes-stat"><span id="notes-stat-last">—</span><small>mới nhất</small></div>
+        </div>
       </div>
 
       <div class="notes-composer">
-        <label for="notes-composer-input">Thêm nhanh</label>
-        <textarea id="notes-composer-input" placeholder="Nhập nội dung… (Ctrl+Enter để lưu)" onkeydown="notesComposerKeydown(event)"></textarea>
-        <div class="notes-composer-actions">
-          <button type="button" class="btn btn-blue" onclick="addPersonalNoteFromComposer()">
-            <i data-lucide="plus" style="width:14px;height:14px"></i> Thêm ghi chú
+        <input type="text" id="notes-composer-title" class="notes-title-input" placeholder="Tiêu đề…"
+               onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('notes-composer-input').focus();}">
+        <textarea id="notes-composer-input" placeholder="Viết gì đó…"
+                  oninput="notesComposerGrow(this)" onkeydown="notesComposerKeydown(event)"></textarea>
+        <div class="notes-composer-bar">
+          <span class="notes-count" id="notes-composer-count">0 ký tự</span>
+          <div class="notes-composer-right">
+            <span class="notes-kbd desktop-only-inline">Ctrl</span><span class="notes-kbd desktop-only-inline">Enter</span>
+            <button type="button" class="notes-add-btn" onclick="addPersonalNoteFromComposer()">
+              <i data-lucide="plus"></i> Thêm
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="notes-toolbar">
+        <div class="notes-search-wrap">
+          <i data-lucide="search"></i>
+          <input type="search" class="notes-search" id="notes-search" placeholder="Tìm trong ghi chú…"
+                 autocomplete="off" oninput="renderPersonalNotesList()">
+          <button type="button" class="notes-search-clear" id="notes-search-clear" onclick="clearNotesSearch()">
+            <i data-lucide="x"></i>
           </button>
-          <span class="notes-hint">Sửa trực tiếp trong thẻ bên dưới — tự lưu khi bạn rời ô nhập.</span>
+        </div>
+        <div class="notes-chips" id="notes-chips">
+          <button type="button" class="notes-chip active" data-f="all" onclick="setNotesFilter('all')">Tất cả</button>
+          <button type="button" class="notes-chip" data-f="pinned" onclick="setNotesFilter('pinned')">Đã ghim</button>
+          <button type="button" class="notes-chip" data-f="today" onclick="setNotesFilter('today')">Hôm nay</button>
         </div>
       </div>
 
       <div id="notes-empty" class="notes-empty" style="display:none">
-        Chưa có ghi chú. Dùng ô <strong>Thêm nhanh</strong> phía trên để tạo dòng đầu tiên.
+        <div class="notes-empty-ico"><i data-lucide="sparkles"></i></div>
+        <div id="notes-empty-text">Chưa có ghi chú nào. Gõ vào ô phía trên rồi bấm <strong>Thêm</strong> để tạo dòng đầu tiên.</div>
       </div>
       <div class="notes-grid" id="notes-list"></div>
     </div>
@@ -3153,6 +3350,97 @@ body:has(.modal-overlay.open) #notes-fab-wrap {
           grid-template-columns: 1fr;
         }
       }
+      /* ══════ GIAO DIỆN MỚI TRANG ĐỌC PANIC ══════ */
+      .pnc-hero {
+        display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+        background: linear-gradient(135deg, rgba(239,68,68,.16), rgba(168,85,247,.10) 60%, rgba(59,140,237,.12));
+        border: 1px solid rgba(255,255,255,.08); border-radius: 18px;
+        padding: 16px 18px; margin-bottom: 16px; box-shadow: 0 10px 34px rgba(0,0,0,.25);
+      }
+      .pnc-hero-left { display: flex; align-items: center; gap: 13px; min-width: 0; }
+      .pnc-hero-icon {
+        width: 46px; height: 46px; flex-shrink: 0; border-radius: 14px; display: grid; place-items: center;
+        background: linear-gradient(140deg, #ef4444, #a855f7); color: #fff;
+        box-shadow: 0 8px 22px rgba(239,68,68,.42);
+      }
+      .pnc-hero-title { font-size: 19px; font-weight: 800; color: var(--text); line-height: 1.15; }
+      .pnc-hero-sub { font-size: 12px; color: var(--text3); margin-top: 3px; max-width: 520px; line-height: 1.5; }
+      .pnc-hero-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+      .pnc-card {
+        background: var(--bg2); border: 1px solid var(--border); border-radius: 16px;
+        padding: 16px; margin-bottom: 14px; box-shadow: 0 6px 26px rgba(0,0,0,.18);
+      }
+      .pnc-card-title {
+        display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 800;
+        color: var(--text2); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 12px;
+      }
+      .pnc-card-title svg { width: 14px; height: 14px; }
+
+      .pnc-steps { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 13px; }
+      .pnc-step {
+        flex: 1; min-width: 128px; display: flex; gap: 9px; align-items: flex-start;
+        background: var(--bg3); border: 1px solid var(--border); border-radius: 12px; padding: 10px 11px;
+      }
+      .pnc-step > b {
+        flex-shrink: 0; width: 20px; height: 20px; border-radius: 7px; display: grid; place-items: center;
+        background: linear-gradient(140deg, var(--accent), #6d8dff); color: #fff; font-size: 11px;
+      }
+      .pnc-step span { font-size: 11.5px; color: var(--text2); line-height: 1.45; }
+
+      .pnc-main-btn {
+        width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+        background: linear-gradient(135deg, #22c55e, #16a34a); color: #fff; border: none;
+        border-radius: 12px; padding: 13px 18px; font-size: 14px; font-weight: 800; font-family: var(--font);
+        cursor: pointer; box-shadow: 0 8px 22px rgba(34,197,94,.35); transition: transform .12s, box-shadow .18s;
+      }
+      .pnc-main-btn:hover { transform: translateY(-1px); box-shadow: 0 12px 28px rgba(34,197,94,.5); }
+      .pnc-main-btn:active { transform: scale(.985); }
+      .pnc-main-btn svg { width: 17px; height: 17px; }
+      .pnc-main-hint { font-size: 11px; color: var(--text3); text-align: center; margin-top: 8px; line-height: 1.6; }
+
+      .pnc-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+      .pnc-chip {
+        flex: 1; min-width: 132px; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+        background: var(--bg3); border: 1px solid var(--border); color: var(--text2);
+        border-radius: 11px; padding: 10px 12px; font-size: 12.5px; font-weight: 650; font-family: var(--font);
+        cursor: pointer; transition: all .15s;
+      }
+      .pnc-chip:hover { color: var(--text); border-color: rgba(59,140,237,.45); background: var(--bg2); }
+      .pnc-chip svg { width: 14px; height: 14px; }
+
+      .pnc-files { display: flex; flex-direction: column; gap: 7px; margin-top: 12px; max-height: 320px; overflow-y: auto; }
+      .pnc-file {
+        display: flex; align-items: center; gap: 10px; text-align: left; width: 100%;
+        background: var(--bg3); border: 1px solid var(--border); border-radius: 11px;
+        padding: 10px 12px; cursor: pointer; font-family: var(--font); transition: all .15s;
+      }
+      .pnc-file:hover { border-color: rgba(239,68,68,.5); background: rgba(239,68,68,.06); transform: translateX(2px); }
+      .pnc-file-ico { width: 30px; height: 30px; flex-shrink: 0; border-radius: 9px; display: grid; place-items: center;
+        background: rgba(239,68,68,.14); color: #ef4444; }
+      .pnc-file-ico svg { width: 15px; height: 15px; }
+      .pnc-file-name { font-size: 12.5px; font-weight: 700; color: var(--text); word-break: break-all; line-height: 1.35; }
+      .pnc-file-meta { font-size: 10.5px; color: var(--text3); font-family: var(--mono); margin-top: 2px; }
+      .pnc-file-tag {
+        margin-left: auto; flex-shrink: 0; font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 999px;
+        background: rgba(239,68,68,.14); color: #ef4444; border: 1px solid rgba(239,68,68,.25);
+      }
+      .pnc-folder-bar {
+        display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--text3);
+        background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 8px 11px; margin-top: 11px;
+      }
+      .pnc-folder-bar b { color: var(--text2); font-weight: 700; }
+      .pnc-folder-bar button {
+        margin-left: auto; background: none; border: none; color: var(--accent); font-size: 11.5px;
+        font-weight: 700; cursor: pointer; font-family: var(--font);
+      }
+      @media (max-width: 640px) {
+        .pnc-hero { padding: 14px; }
+        .pnc-hero-title { font-size: 17px; }
+        .pnc-step { min-width: 100%; }
+        .pnc-chip { min-width: 100%; }
+      }
+
       .panic-drop-zone {
         position: relative;
         border: 2px dashed var(--border);
@@ -3488,49 +3776,41 @@ body:has(.modal-overlay.open) #notes-fab-wrap {
 
     <!-- PAGE: ĐỌC PANIC FULL -->
     <div class="page" id="page-panic">
-      <div class="page-title">
-        <i data-lucide="cpu" style="width:20px;height:20px;vertical-align:middle;margin-right:8px;color:#ef4444"></i>
-        Đọc Panic Full
-      </div>
-      <div class="page-sub">Phân tích lỗi crash panic, lỗi khởi động lại liên tục và các linh kiện phần cứng hư hỏng.</div>
-
-      <!-- TÙY CHỌN BỘ PHÂN TÍCH -->
-      <div style="display:flex;gap:12px;margin-bottom:18px;align-items:center;flex-wrap:wrap">
-        <div style="font-size:13px;font-weight:700;color:var(--text2)">Chẩn đoán AI (Gemini):</div>
-        <div id="gemini-status-badge" style="font-size:11px;font-weight:700;background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.2);padding:3px 8px;border-radius:10px">
-          Chưa cấu hình API Key
+      <div class="pnc-hero">
+        <div class="pnc-hero-left">
+          <div class="pnc-hero-icon"><i data-lucide="cpu" style="width:23px;height:23px"></i></div>
+          <div>
+            <div class="pnc-hero-title">Đọc Panic Full</div>
+            <div class="pnc-hero-sub">Cắm cáp → chọn thư mục panic trên máy khách → app đọc và chẩn đoán linh kiện hư ngay.</div>
+          </div>
         </div>
-        <select id="gemini-model-select" style="display: none;">
-          <option value="gemini-3.6-flash">⚡ Gemini 3.6 Flash</option>
-          <option value="gemini-3.1-flash-lite">💨 Gemini 3.1 Flash Lite</option>
-        </select>
-
-        <!-- Custom Gemini Dropdown -->
-        <div class="gemini-custom-dropdown" id="gemini-custom-dropdown">
-          <button type="button" class="gemini-dropdown-trigger" id="gemini-dropdown-trigger">
-            <span id="gemini-selected-label">3.6 Flash</span>
-            <i data-lucide="chevron-down" style="width:14px;height:14px;color:var(--text2)"></i>
-          </button>
-          
-          <div class="gemini-dropdown-menu" id="gemini-dropdown-menu">
-            <!-- List of Models -->
-            <div class="gemini-menu-item" data-model="lite">
-              <div class="gemini-item-check">
-                <i data-lucide="check" style="width:14px;height:14px"></i>
+        <div class="pnc-hero-right">
+          <div id="gemini-status-badge" style="font-size:11px;font-weight:700;background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.2);padding:5px 10px;border-radius:999px">
+            Chưa cấu hình API Key
+          </div>
+          <select id="gemini-model-select" style="display: none;">
+            <option value="gemini-3.6-flash">⚡ Gemini 3.6 Flash</option>
+            <option value="gemini-3.1-flash-lite">💨 Gemini 3.1 Flash Lite</option>
+          </select>
+          <div class="gemini-custom-dropdown" id="gemini-custom-dropdown">
+            <button type="button" class="gemini-dropdown-trigger" id="gemini-dropdown-trigger">
+              <span id="gemini-selected-label">3.6 Flash</span>
+              <i data-lucide="chevron-down" style="width:14px;height:14px;color:var(--text2)"></i>
+            </button>
+            <div class="gemini-dropdown-menu" id="gemini-dropdown-menu">
+              <div class="gemini-menu-item" data-model="lite">
+                <div class="gemini-item-check"><i data-lucide="check" style="width:14px;height:14px"></i></div>
+                <div class="gemini-item-content">
+                  <div class="gemini-item-title">3.1 Flash-Lite</div>
+                  <div class="gemini-item-desc">Câu trả lời nhanh nhất</div>
+                </div>
               </div>
-              <div class="gemini-item-content">
-                <div class="gemini-item-title">3.1 Flash-Lite</div>
-                <div class="gemini-item-desc">Câu trả lời nhanh nhất</div>
-              </div>
-            </div>
-            
-            <div class="gemini-menu-item" data-model="flash">
-              <div class="gemini-item-check">
-                <i data-lucide="check" style="width:14px;height:14px"></i>
-              </div>
-              <div class="gemini-item-content">
-                <div class="gemini-item-title">3.6 Flash</div>
-                <div class="gemini-item-desc">Trợ giúp toàn diện</div>
+              <div class="gemini-menu-item" data-model="flash">
+                <div class="gemini-item-check"><i data-lucide="check" style="width:14px;height:14px"></i></div>
+                <div class="gemini-item-content">
+                  <div class="gemini-item-title">3.6 Flash</div>
+                  <div class="gemini-item-desc">Trợ giúp toàn diện</div>
+                </div>
               </div>
             </div>
           </div>
@@ -3540,6 +3820,56 @@ body:has(.modal-overlay.open) #notes-fab-wrap {
       <div class="panic-main-layout">
         <!-- CỘT TRÁI: NHẬP VÀ QUÉT LOG -->
         <div class="panic-col-input">
+          <div class="pnc-card">
+            <div class="pnc-card-title"><i data-lucide="usb"></i> Lấy log từ máy khách</div>
+            <div class="pnc-steps">
+              <div class="pnc-step"><b>1</b><span>Cắm cáp, mở 3uTools → <strong style="color:var(--text)">Crash Logs → Details → Export</strong> ra 1 thư mục</span></div>
+              <div class="pnc-step"><b>2</b><span>Bấm nút xanh, chọn đúng thư mục vừa xuất (chỉ 1 lần)</span></div>
+              <div class="pnc-step"><b>3</b><span>App tự liệt kê file panic và canh thư mục — xuất thêm là tự hiện</span></div>
+            </div>
+
+            <button type="button" class="pnc-main-btn" onclick="moThuMucPanic(true)">
+              <i data-lucide="folder-open"></i> Mở thư mục log đã xuất
+            </button>
+            <div class="pnc-main-hint" id="pnc-main-hint">
+              App nhớ thư mục này, lần sau chỉ cần bấm nút là xong.
+              <a href="#" onclick="event.preventDefault();document.getElementById('pnc-help').style.display=document.getElementById('pnc-help').style.display==='none'?'block':'none'" style="color:var(--accent);font-weight:700">Xem cách xuất log ›</a>
+            </div>
+            <div id="pnc-help" style="display:none;margin-top:10px;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px 14px;font-size:11.5px;line-height:1.85;color:var(--text2)">
+              <b style="color:var(--text)">Cách 1 — 3uTools (nhanh nhất):</b><br>
+              iDevice → Information → dòng <b>Crash Logs</b> → <b>Details</b> → chọn dòng <b>panic-full…</b> → <b>Export</b> → lưu vào 1 thư mục riêng (ví dụ <span style="font-family:var(--mono)">D:\PanicLog</span>).<br>
+              <b style="color:var(--text)">Cách 2 — từ chính iPhone:</b><br>
+              Cài đặt → Quyền riêng tư &amp; Bảo mật → Phân tích &amp; Cải tiến → Dữ liệu phân tích → chọn <b>panic-full…</b> → Chia sẻ → gửi qua Zalo/AirDrop về máy rồi lưu vào thư mục đó.<br>
+              <span style="color:var(--text3)">Lưu ý: trình duyệt không đọc thẳng được bộ nhớ iPhone (Apple chỉ mở phần ảnh DCIM), nên bước xuất log bằng 3uTools là bắt buộc.</span>
+            </div>
+
+            <div class="pnc-folder-bar" id="pnc-folder-bar" style="display:none">
+              <i data-lucide="folder" style="width:14px;height:14px"></i>
+              <span>Thư mục: <b id="pnc-folder-name">—</b></span>
+              <button type="button" onclick="panicForgetDir()">Đổi thư mục</button>
+            </div>
+            <div class="pnc-files" id="pnc-files"></div>
+
+            <input type="file" id="panic-file-picker" accept=".ips,.panic,.crash,.txt,.log,.json" style="display:none" onchange="onPanicFilePicked(this)">
+            <input type="file" id="panic-image-picker" accept="image/*" style="display:none" onchange="onPanicImagePicked(this)">
+            <div class="pnc-chips">
+              <button type="button" class="pnc-chip" onclick="document.getElementById('panic-file-picker').click()">
+                <i data-lucide="file-search"></i> Chọn tệp log
+              </button>
+              <button type="button" class="pnc-chip hide-on-pc" onclick="startPanicCamera()">
+                <i data-lucide="camera"></i> Chụp ảnh log
+              </button>
+              <button type="button" class="pnc-chip" onclick="document.getElementById('panic-image-picker').click()">
+                <i data-lucide="image"></i> Tải ảnh log
+              </button>
+              <button type="button" class="pnc-chip hide-on-mobile" id="btn-dcsd-connect" onclick="toggleDCSDConnection()">
+                <i data-lucide="link"></i> Cáp DCSD
+              </button>
+            </div>
+            <div id="dcsd-status" style="font-size:11px;color:var(--text3);margin-top:8px;display:none">
+              <span class="dcsd-status-dot"></span> Đang kết nối cáp DCSD...
+            </div>
+          </div>
           <div class="section-card">
             <div class="section-title">
               <i data-lucide="file-text" style="width:14px;height:14px;margin-right:6px;vertical-align:middle"></i>
@@ -3571,31 +3901,6 @@ body:has(.modal-overlay.open) #notes-fab-wrap {
                 <i data-lucide="trash-2" style="width:15px;height:15px;color:#ef4444"></i>
               </button>
             </div>
-
-            <!-- CHỤP ẢNH & KẾT NỐI -->
-            <div style="border-top:1px solid var(--border);margin-top:18px;padding-top:18px">
-              <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:12px">Kết nối & Lấy log trực tiếp:</div>
-              <div class="panic-action-buttons">
-                <!-- Chụp ảnh camera -->
-                <button class="btn btn-ghost hide-on-pc" onclick="startPanicCamera()" style="display:inline-flex;align-items:center;gap:6px">
-                  <i data-lucide="camera" style="width:14px;height:14px;color:#ef4444"></i> Quét ảnh log (Camera)
-                </button>
-                <!-- Chọn ảnh log -->
-                <input type="file" id="panic-image-picker" accept="image/*" style="display:none" onchange="onPanicImagePicked(this)">
-                <button class="btn btn-ghost" onclick="document.getElementById('panic-image-picker').click()" style="display:inline-flex;align-items:center;gap:6px">
-                  <i data-lucide="image" style="width:14px;height:14px;color:var(--accent)"></i> Tải ảnh log lên
-                </button>
-                <!-- Kết nối Cáp DCSD -->
-                <button id="btn-dcsd-connect" class="btn btn-ghost hide-on-mobile" onclick="toggleDCSDConnection()" style="display:inline-flex;align-items:center;gap:6px">
-                  <i data-lucide="link" style="width:14px;height:14px;color:#22c55e"></i> Kết nối Cáp DCSD
-                </button>
-              </div>
-              <div id="dcsd-status" style="font-size:11px;color:var(--text3);margin-top:6px;display:none">
-                <span class="dcsd-status-dot"></span> Đang kết nối cáp DCSD...
-              </div>
-            </div>
-            
-
 
           </div>
         </div>
@@ -3728,6 +4033,18 @@ body:has(.modal-overlay.open) #notes-fab-wrap {
     <div class="page" id="page-settings">
       <div class="page-title"><i data-lucide="settings" style="width:20px;height:20px;vertical-align:middle;margin-right:8px"></i>Cài Đặt</div>
       <div class="page-sub">Cấu hình hệ thống và Google Drive</div>
+      <div class="section-card">
+        <div class="section-title"><i data-lucide="flask-conical" style="width:14px;height:14px;margin-right:6px;vertical-align:middle"></i>Phếu ví dụ (test giao diện)</div>
+        <p style="font-size:12.5px;color:var(--text2);line-height:1.6;margin-bottom:10px">
+          Tạo 5 phiếu giả để thử giao diện / nhấn giữ chọn nhiều. Chỉ hiện trên máy này,
+          <b style="color:var(--text)">không lưu, không đồng bộ lên Google Sheets</b>. Tắt app mở lại là hết.
+        </p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button type="button" class="btn" onclick="loadDemoTickets()"><i data-lucide="plus" style="width:14px;height:14px"></i> Tạo phiếu ví dụ</button>
+          <button type="button" class="btn btn-ghost" onclick="removeDemoTickets()"><i data-lucide="trash-2" style="width:14px;height:14px"></i> Xóa phiếu ví dụ</button>
+        </div>
+      </div>
+
       <div class="section-card">
         <div class="section-title"><i data-lucide="cloud" style="width:14px;height:14px;margin-right:6px;vertical-align:middle"></i>Google Drive / Sheets</div>
 
@@ -5348,7 +5665,7 @@ function saveStorage() {
     // Tách base64 ra khỏi DB chính để tránh vượt quota localStorage (~5MB)
     const dbClean = {
       nextId: DB.nextId,
-      tickets: DB.tickets.map(t => {
+      tickets: DB.tickets.filter(t => !t.__demo).map(t => {
         const clean = { ...t };
         IMG_SLOTS.forEach(s => {
           try {
@@ -7234,6 +7551,7 @@ function statusBadge(s) {
   return `<span class="badge badge-${cls}">${s}</span>`;
 }
 function renderTable(tickets) {
+  clearTimeout(_lpTimer); _lpTimer = null;   // vẽ lại danh sách thì hủy nhấn giữ đang dở
   const tbody = document.getElementById('ticket-tbody');
   const me = AUTH.currentUser?.username || '';
   const role = AUTH.currentUser?.role || 'viewer';
@@ -7401,6 +7719,75 @@ function renderTable(tickets) {
   syncSelectionUi();
 }
 
+// ══════ NHẤN GIỮ ĐỂ CHỌN NHIỀU PHIẾU (điện thoại) ══════
+let multiSelectMode = false;
+let _lpTimer = null, _lpStart = null, _lpFired = false, _lpFiredAt = 0;
+
+function enterMultiSelect() {
+  multiSelectMode = true;
+  document.body.classList.add('multi-select');
+}
+function exitMultiSelect() {
+  multiSelectMode = false;
+  document.body.classList.remove('multi-select');
+  document.querySelectorAll('#ticket-tbody tr.msel').forEach(r => r.classList.remove('msel'));
+}
+// Bật/tắt chọn 1 phiếu trong chế độ chọn nhiều
+function toggleMulti(id) {
+  const on = !selectedIds.has(id);
+  if (on) selectedIds.add(id); else selectedIds.delete(id);
+  const cb = document.querySelector(`#ticket-tbody .row-chk[data-id="${id}"]`);
+  if (cb) cb.checked = on;
+  const row = document.getElementById('row-' + id);
+  if (row) row.classList.toggle('msel', on);
+  if (selectedIds.size === 0) exitMultiSelect();
+  syncSelectionUi();
+}
+
+document.addEventListener('pointerdown', e => {
+  const row = e.target.closest && e.target.closest('#ticket-tbody tr');
+  if (!row || row.classList.contains('empty-row')) return;
+  _lpStart = { x: e.clientX, y: e.clientY };
+  _lpFired = false;
+  clearTimeout(_lpTimer);
+  _lpTimer = setTimeout(() => {
+    _lpTimer = null;
+    if (!row.isConnected) return;          // danh sách vừa vẽ lại thì bỏ qua, tránh chọn nhầm
+    _lpFired = true; _lpFiredAt = Date.now();
+    const id = Number(String(row.id).replace('row-', ''));
+    if (!id) return;
+    if (!multiSelectMode) enterMultiSelect();
+    toggleMulti(id);
+    if (navigator.vibrate) navigator.vibrate(35);
+  }, 450);
+}, true);
+
+document.addEventListener('pointermove', e => {
+  if (!_lpTimer || !_lpStart) return;
+  if (Math.abs(e.clientX - _lpStart.x) > 10 || Math.abs(e.clientY - _lpStart.y) > 10) {
+    clearTimeout(_lpTimer); _lpTimer = null;   // đang vuốt/cuộn thì thôi
+  }
+}, true);
+['pointerup', 'pointercancel'].forEach(ev =>
+  document.addEventListener(ev, () => { clearTimeout(_lpTimer); _lpTimer = null; }, true));
+window.addEventListener('scroll', () => { clearTimeout(_lpTimer); _lpTimer = null; }, true);
+
+// Chặn cú click phát sinh ngay sau khi nhấn giữ (nếu không sẽ chọn rồi bỏ chọn liền)
+document.addEventListener('click', e => {
+  if (_lpFired || Date.now() - _lpFiredAt < 400) { _lpFired = false; _lpFiredAt = 0; e.stopPropagation(); e.preventDefault(); }
+}, true);
+// Nhấp ra chỗ trống bất kỳ (ngoài thẻ phiếu và thanh thao tác) thì thoát chế độ chọn nhiều
+document.addEventListener('click', e => {
+  if (!multiSelectMode) return;
+  const t = e.target;
+  if (t.closest && (t.closest('#ticket-tbody tr') || t.closest('.sel-bar') || t.closest('.modal') || t.closest('.sheet'))) return;
+  clearSelection();
+});
+
+document.addEventListener('contextmenu', e => {
+  if (e.target.closest && e.target.closest('#ticket-tbody tr')) e.preventDefault();
+});
+
 // ══════ CHỌN NHIỀU PHIẾU ĐỂ XÓA HÀNG LOẠT ══════
 function toggleRowCheck(id, on) {
   if (on) selectedIds.add(id); else selectedIds.delete(id);
@@ -7449,10 +7836,19 @@ function syncSelectionUi() {
       lbl.textContent = n >= 1 ? `Đã chọn ${n} phiếu` : `Phiếu #${selectedTicketId}`;
     }
   }
+
+  // Render lại danh sách xong thì tô lại viền sáng cho các phiếu đang chọn
+  if (multiSelectMode) {
+    document.querySelectorAll('#ticket-tbody tr').forEach(r => {
+      const id = Number(String(r.id).replace('row-', ''));
+      r.classList.toggle('msel', selectedIds.has(id));
+    });
+  }
 }
 
 // Bỏ chọn tất cả, thu thanh thao tác lại
 function clearSelection() {
+  exitMultiSelect();
   selectedIds.clear();
   selectedTicketId = null;
   document.querySelectorAll('#ticket-tbody .row-chk').forEach(cb => cb.checked = false);
@@ -7595,6 +7991,8 @@ function canEditTicket(ticketId) {
 }
 
 function selectRow(id) {
+  if (_lpFiredAt && Date.now() - _lpFiredAt < 400) return;   // vừa nhấn giữ xong, bỏ qua cú click kèm theo
+  if (multiSelectMode) { toggleMulti(id); return; }   // đang chọn nhiều: nhấp để tick thêm phiếu
   selectedTicketId = id;
   document.querySelectorAll('.tbl tbody tr').forEach(r => r.classList.remove('selected'));
   const row = document.getElementById('row-' + id);
@@ -9604,8 +10002,30 @@ function updateMobileHeader(user) {
   if (el_av) setAvatarElement(el_av, user);
 }
 
+// PHIEU VI DU DE TEST GIAO DIEN
+// Chi hien khi mo bang dia chi index.html?demo=1 - khong bao gio duoc luu hay dong bo len Sheets
+const DEMO_TICKETS = [
+  { id: 9001, date_received: '26/7/2026', customer_name: 'Anh Tài', phone: '0932779602', brand: 'Apple', model: 'iPad 9', imei: '123456789', problem: 'Mất cảm ứng', total: 0, status: 'Đang sửa', created_by: 'admin', __demo: true },
+  { id: 9002, date_received: '25/7/2026', customer_name: 'Nguyễn Thị Hồng Loan', phone: '0908123456', brand: 'Samsung', model: 'Galaxy S23 Ultra 5G', imei: '356938035643809', problem: 'Màn hình bị sọc, không cảm ứng, pin phồng nặng cần thay luôn', total: 12500000, status: 'Chờ linh kiện', created_by: 'admin', __demo: true },
+  { id: 9003, date_received: '24/7/2026', customer_name: 'Trần Văn Bảo', phone: '0913222888', brand: 'Apple', model: 'iPhone 14 Pro Max', imei: '359204081234567', problem: 'Thay pin + ép kính', total: 2350000, status: 'Đã thanh toán', created_by: 'admin', __demo: true },
+  { id: 9004, date_received: '24/7/2026', customer_name: 'Chị Mai', phone: '0977654321', brand: 'Oppo', model: 'Reno 8', imei: '', problem: 'Sạc không vào điện', total: 450000, status: 'Đã trả máy', created_by: 'admin', __demo: true },
+  { id: 9005, date_received: '23/7/2026', customer_name: 'Anh Sơn', phone: '0356789012', brand: 'Xiaomi', model: 'Redmi Note 12', imei: '867123045678901', problem: 'Vào nước, không lên nguồn', total: 800000, status: 'Đang sửa', created_by: 'admin', __demo: true }
+];
+function loadDemoTickets() {
+  DEMO_TICKETS.forEach(t => { if (!DB.tickets.some(x => x.id === t.id)) DB.tickets.push({ ...t }); });
+  renderTable(DB.tickets);
+  if (typeof toast === 'function') toast('Đã thêm 5 phiếu ví dụ (không lưu, không đồng bộ)', 'success');
+  if (typeof showPage === 'function') showPage('list');
+}
+function removeDemoTickets() {
+  DB.tickets = DB.tickets.filter(t => !t.__demo);
+  renderTable(DB.tickets);
+  if (typeof toast === 'function') toast('Đã xóa phiếu ví dụ', 'success');
+}
+
 function initApp() {
   lucide.createIcons();
+  if (location.search.includes('demo=1') || location.hash.includes('demo')) setTimeout(loadDemoTickets, 300);
   initFabVisibility();
   initFabDraggability();
   // Hien thi du lieu local truoc (neu co), roi sync tu server
@@ -9642,6 +10062,7 @@ function viewSelected() {
   showForm(selectedTicketId, true); // true = readonly
 }
 function quickView(id) {
+  if (multiSelectMode) return;
   const role = AUTH.currentUser?.role || 'viewer';
   if (role === 'viewer') {
     // Người xem: luôn mở readonly, xem được tất cả phiếu
@@ -10512,6 +10933,164 @@ function initPanicClipboardPaste() {
   });
 }
 
+/* ══════ CẮM CÁP → MỞ THẲNG THƯ MỤC PANIC ══════
+   Trình duyệt không tự chui vào bộ nhớ máy được, nên luồng là:
+   cắm cáp (máy hiện ra như một ổ đĩa) → bấm nút → chọn thư mục 1 lần → app nhớ luôn,
+   những lần sau chỉ cần cắm cáp + cấp quyền là nó tự liệt kê file panic mới nhất. */
+const PANIC_DIR_DB = 'ttm-panic';
+const PANIC_DIR_KEY = 'lastDir';
+
+function panicIdb() {
+  return new Promise((res, rej) => {
+    const rq = indexedDB.open(PANIC_DIR_DB, 1);
+    rq.onupgradeneeded = () => rq.result.createObjectStore('h');
+    rq.onsuccess = () => res(rq.result);
+    rq.onerror = () => rej(rq.error);
+  });
+}
+async function panicSaveDir(handle) {
+  try { const db = await panicIdb(); db.transaction('h', 'readwrite').objectStore('h').put(handle, PANIC_DIR_KEY); } catch (e) {}
+}
+async function panicLoadDir() {
+  try {
+    const db = await panicIdb();
+    return await new Promise(res => {
+      const rq = db.transaction('h', 'readonly').objectStore('h').get(PANIC_DIR_KEY);
+      rq.onsuccess = () => res(rq.result || null);
+      rq.onerror = () => res(null);
+    });
+  } catch (e) { return null; }
+}
+async function panicForgetDir() {
+  try { const db = await panicIdb(); db.transaction('h', 'readwrite').objectStore('h').delete(PANIC_DIR_KEY); } catch (e) {}
+  clearInterval(_panicWatch); _panicWatch = null; _panicDir = null; _panicSeen = new Set();
+  const bar = document.getElementById('pnc-folder-bar');
+  if (bar) bar.style.display = 'none';
+  const list = document.getElementById('pnc-files');
+  if (list) list.innerHTML = '';
+  toast('Đã quên thư mục đã chọn', 'info');
+}
+
+function laFilePanic(name) {
+  const n = String(name || '').toLowerCase();
+  if (/\.(ips|panic|crash)$/.test(n)) return true;
+  return /panic|stacks|kernel/.test(n) && /\.(txt|log|json|gz|synced)$/.test(n);
+}
+
+// Quét thư mục (tối đa 3 cấp) tìm mọi file panic
+async function quetThuMucPanic(dir, capSau = 0, ketQua = []) {
+  for await (const [ten, h] of dir.entries()) {
+    if (ketQua.length >= 60) break;
+    if (h.kind === 'file') {
+      if (laFilePanic(ten)) {
+        try { const f = await h.getFile(); ketQua.push({ handle: h, name: ten, size: f.size, ts: f.lastModified }); }
+        catch (e) {}
+      }
+    } else if (capSau < 2) {
+      const t = ten.toLowerCase();
+      if (/(panic|log|analytic|diagnos|crash|dcim|download)/.test(t) || capSau === 0) {
+        try { await quetThuMucPanic(h, capSau + 1, ketQua); } catch (e) {}
+      }
+    }
+  }
+  return ketQua;
+}
+
+async function moThuMucPanic(dungLai) {
+  // Máy/trình duyệt không hỗ trợ chọn thư mục → mở thẳng trình chọn tệp
+  if (!window.showDirectoryPicker) {
+    document.getElementById('panic-file-picker')?.click();
+    return;
+  }
+  try {
+    let dir = dungLai ? await panicLoadDir() : null;
+    if (dir) {
+      const q = await dir.queryPermission({ mode: 'read' });
+      if (q !== 'granted' && (await dir.requestPermission({ mode: 'read' })) !== 'granted') dir = null;
+    }
+    if (!dir) {
+      dir = await window.showDirectoryPicker({ id: 'panic-logs', mode: 'read', startIn: 'downloads' });
+      await panicSaveDir(dir);
+    }
+    await hienFilePanic(dir);
+  } catch (e) {
+    if (e && e.name === 'AbortError') return;
+    console.warn('[panic dir]', e);
+    toast('Không mở được thư mục — thử nút "Chọn tệp log" nhé!', 'error');
+    document.getElementById('panic-file-picker')?.click();
+  }
+}
+
+async function hienFilePanic(dir, imLang) {
+  const list = document.getElementById('pnc-files');
+  const bar = document.getElementById('pnc-folder-bar');
+  const barName = document.getElementById('pnc-folder-name');
+  if (!list) return;
+  list.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:8px 2px">⏳ Đang quét thư mục…</div>';
+  if (bar) bar.style.display = 'flex';
+  if (barName) barName.textContent = dir.name || 'Thư mục đã chọn';
+
+  let files = [];
+  try { files = await quetThuMucPanic(dir); } catch (e) {}
+  files.sort((a, b) => b.ts - a.ts);
+  _panicFiles = files;
+  _panicSeen = new Set(files.map(f => f.name + f.ts));
+  canhThuMucPanic(dir);
+
+  if (!files.length) {
+    list.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:10px 2px;line-height:1.7">'
+      + 'Không thấy tệp panic nào trong thư mục này.<br>iPhone: <b>Cài đặt → Quyền riêng tư → Phân tích & Cải tiến → Dữ liệu phân tích</b>, '
+      + 'chọn tệp <b>panic-full…</b> rồi Chia sẻ sang máy tính, sau đó chọn lại thư mục chứa tệp đó.</div>';
+    return;
+  }
+  list.innerHTML = files.map((f, i) => {
+    const kb = f.size > 1024 * 1024 ? (f.size / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(f.size / 1024)) + ' KB';
+    const d = new Date(f.ts || Date.now()).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    const moi = i === 0 ? '<span class="pnc-file-tag">MỚI NHẤT</span>' : '';
+    return `<button type="button" class="pnc-file" onclick="chonFilePanic(${i})">
+      <span class="pnc-file-ico"><i data-lucide="file-text"></i></span>
+      <span style="min-width:0">
+        <span class="pnc-file-name">${escHtml(f.name)}</span>
+        <span class="pnc-file-meta">${d} · ${kb}</span>
+      </span>${moi}
+    </button>`;
+  }).join('');
+  if (window.lucide) lucide.createIcons();
+  if (!imLang) toast('Thấy ' + files.length + ' tệp panic — bấm để đọc', 'success');
+}
+
+let _panicFiles = [];
+let _panicDir = null, _panicWatch = null, _panicSeen = new Set();
+
+// Canh thư mục: xuất thêm log từ 3uTools là app tự thấy, khỏi bấm lại
+function canhThuMucPanic(dir) {
+  _panicDir = dir;
+  clearInterval(_panicWatch);
+  _panicWatch = setInterval(async () => {
+    const page = document.getElementById('page-panic');
+    if (!page || !page.classList.contains('active') || !_panicDir) return;
+    try {
+      if ((await _panicDir.queryPermission({ mode: 'read' })) !== 'granted') return;
+      const files = await quetThuMucPanic(_panicDir);
+      const moi = files.filter(f => !_panicSeen.has(f.name + f.ts));
+      if (moi.length) {
+        await hienFilePanic(_panicDir, true);
+        toast('Có ' + moi.length + ' log panic mới trong thư mục!', 'success');
+      }
+    } catch (e) {}
+  }, 4000);
+}
+async function chonFilePanic(i) {
+  const f = _panicFiles[i];
+  if (!f) return;
+  try {
+    const file = await f.handle.getFile();
+    readPanicFile(file);
+  } catch (e) {
+    toast('Không đọc được tệp này (máy đã rút cáp?)', 'error');
+  }
+}
+
 function onPanicFilePicked(input) {
   const file = input.files[0];
   if (file) {
@@ -11290,10 +11869,151 @@ async function syncPersonalNotes() {
     personalNotesSyncing = false;
   }
 }
+let notesFilter = 'all';
+const NOTE_TONES = ['#3b8ced', '#a855f7', '#10b981', '#f59e0b', '#ec4899', '#06b6d4'];
+
+// Tiêu đề được cất ngay trong nội dung dưới dạng dòng đầu "# ..." — nhờ vậy đồng bộ Sheets không cần đổi gì
+function notesParse(text) {
+  const raw = String(text || '');
+  const m = raw.match(/^#[ \t]+([^\n]*)\n?([\s\S]*)$/);
+  if (m) return { title: m[1].trim(), body: m[2].replace(/^\n/, '') };
+  return { title: '', body: raw };
+}
+function notesJoin(title, body) {
+  const t = String(title || '').trim().replace(/\s+/g, ' ');
+  const b = String(body || '').replace(/^\n+/, '');
+  return t ? ('# ' + t + (b ? '\n' + b : '')) : b;
+}
+
+function notesToneOf(id) {
+  const s = String(id || '');
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return NOTE_TONES[h % NOTE_TONES.length];
+}
+// "5 phút trước", "Hôm qua 14:20"…
+function notesRelTime(ts) {
+  const d = new Date(ts || Date.now());
+  const diff = Date.now() - d.getTime();
+  const phut = Math.floor(diff / 60000);
+  if (phut < 1) return 'Vừa xong';
+  if (phut < 60) return phut + ' phút trước';
+  const gio = Math.floor(phut / 60);
+  if (gio < 24 && d.toDateString() === new Date().toDateString()) return gio + ' giờ trước';
+  const homQua = new Date(); homQua.setDate(homQua.getDate() - 1);
+  const hhmm = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+  if (d.toDateString() === homQua.toDateString()) return 'Hôm qua ' + hhmm;
+  return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }) + ' ' + hhmm;
+}
+// Biến link / email / số điện thoại thành thứ bấm được, và tô vàng từ đang tìm
+function notesRichText(text, q) {
+  let h = escHtml(String(text || ''));
+  h = h.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+  h = h.replace(/\b([\w.+-]+@[\w-]+\.[\w.-]+)\b/g, '<a href="mailto:$1">$1</a>');
+  h = h.replace(/(^|[\s(])(0\d{8,10})\b/g, '$1<a href="tel:$2">$2</a>');
+  if (q) {
+    const safe = escHtml(q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    h = h.replace(new RegExp('(' + safe + ')(?![^<]*>)', 'gi'), '<mark>$1</mark>');
+  }
+  return h;
+}
+// Nhận diện nội dung để gợi ý hành động nhanh
+function notesSmartTags(text) {
+  const t = String(text || '');
+  const tags = [];
+  const mail = t.match(/[\w.+-]+@[\w-]+\.[\w.-]+/);
+  const url  = t.match(/https?:\/\/[^\s]+/);
+  const tel  = t.match(/(^|[\s(])(0\d{8,10})\b/);
+  const imei = (t.match(/\b\d{15}\b/) || [])[0];
+  if (mail) tags.push(`<a class="ntag" href="mailto:${escAttr(mail[0])}"><i data-lucide="mail"></i> Gửi mail</a>`);
+  if (url)  tags.push(`<a class="ntag" href="${escAttr(url[0])}" target="_blank" rel="noopener"><i data-lucide="external-link"></i> Mở link</a>`);
+  if (tel)  tags.push(`<a class="ntag" href="tel:${escAttr(tel[2])}"><i data-lucide="phone"></i> Gọi ${escHtml(tel[2])}</a>`);
+  if (imei) tags.push(`<button type="button" class="ntag" onclick="timPhieuTheoImei('${escAttr(imei)}')"><i data-lucide="search"></i> Tìm phiếu IMEI</button>`);
+  return tags.length ? `<div class="ncard-tags">${tags.join('')}</div>` : '';
+}
+function timPhieuTheoImei(imei) {
+  if (typeof showPage === 'function') showPage('list');
+  ['mobile-search-input', 'desktop-search-input'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.value = imei; el.dispatchEvent(new Event('input', { bubbles: true })); }
+  });
+  if (typeof toast === 'function') toast('Đang tìm phiếu có IMEI ' + imei, 'info');
+}
+function copyNoteText(id) {
+  const n = personalNoteItems.find(x => x.id === id);
+  if (!n) return;
+  const done = () => { if (typeof toast === 'function') toast('Đã chép nội dung ghi chú', 'success'); };
+  if (navigator.clipboard) navigator.clipboard.writeText(n.text || '').then(done).catch(() => {});
+  else { const ta = document.createElement('textarea'); ta.value = n.text || ''; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); done(); }
+}
+// Bấm vào nội dung là sửa tại chỗ, rời ô là tự lưu
+function startEditNote(id, bodyEl, focusTitle) {
+  if (!bodyEl || bodyEl.dataset.editing === '1') return;
+  const n = personalNoteItems.find(x => x.id === id);
+  if (!n) return;
+  bodyEl.dataset.editing = '1';
+  const pt = notesParse(n.text);
+  const card = bodyEl.closest('.ncard');
+  const titleEl = card ? card.querySelector('.ncard-title') : null;
+
+  const box = document.createElement('div');
+  const ti = document.createElement('input');
+  ti.type = 'text'; ti.className = 'ncard-edit-title'; ti.placeholder = 'Tiêu đề…'; ti.value = pt.title;
+  const ta = document.createElement('textarea');
+  ta.className = 'ncard-edit'; ta.value = pt.body;
+  box.appendChild(ti); box.appendChild(ta);
+
+  let saved = false;
+  const luu = () => {
+    if (saved) return; saved = true;
+    const gop = notesJoin(ti.value, ta.value);
+    onPersonalNoteBlur(id, { value: gop });
+    renderPersonalNotesList();
+  };
+  const roiO = () => setTimeout(() => { if (!box.contains(document.activeElement)) luu(); }, 0);
+  ti.onblur = roiO; ta.onblur = roiO;
+  const phim = e => {
+    if (e.key === 'Escape') { saved = true; renderPersonalNotesList(); }
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); luu(); }
+  };
+  ti.onkeydown = e => { if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); ta.focus(); } phim(e); };
+  ta.onkeydown = phim;
+
+  if (titleEl) titleEl.remove();
+  bodyEl.replaceWith(box);
+  ta.style.height = 'auto';
+  ta.style.height = Math.min(ta.scrollHeight + 2, 400) + 'px';
+  const el = focusTitle ? ti : ta;
+  el.focus();
+  if (el === ta) ta.setSelectionRange(ta.value.length, ta.value.length);
+}
+
+function notesComposerGrow(ta) {
+  ta.style.height = 'auto';
+  ta.style.height = Math.min(ta.scrollHeight, 260) + 'px';
+  const c = document.getElementById('notes-composer-count');
+  if (c) c.textContent = (ta.value || '').length + ' ký tự';
+}
+function clearNotesSearch() {
+  const el = document.getElementById('notes-search');
+  if (el) { el.value = ''; el.focus(); }
+  renderPersonalNotesList();
+}
+function setNotesFilter(f) {
+  notesFilter = f;
+  document.querySelectorAll('#notes-chips .notes-chip').forEach(b => b.classList.toggle('active', b.dataset.f === f));
+  renderPersonalNotesList();
+}
+
 function getPersonalNotesForDisplay() {
   const q = (document.getElementById('notes-search')?.value || '').trim().toLowerCase();
   let items = personalNoteItems.slice();
   if (q) items = items.filter(n => String(n.text || '').toLowerCase().includes(q));
+  if (notesFilter === 'pinned') items = items.filter(n => n.pinned);
+  else if (notesFilter === 'today') {
+    const hnay = new Date().toDateString();
+    items = items.filter(n => new Date(n.ts || 0).toDateString() === hnay);
+  }
   items.sort((a, b) => {
     const pa = !!a.pinned, pb = !!b.pinned;
     if (pa !== pb) return pb ? 1 : -1;
@@ -11310,7 +12030,8 @@ function notesComposerKeydown(e) {
 function addPersonalNoteFromComposer() {
   const ta = document.getElementById('notes-composer-input');
   if (!ta) return;
-  const text = (ta.value || '').trim();
+  const tiEl = document.getElementById('notes-composer-title');
+  const text = notesJoin(tiEl ? tiEl.value : '', (ta.value || '').trim());
   if (!text) {
     if (typeof toast === 'function') toast('Nhập nội dung ghi chú.', 'info');
     return;
@@ -11322,6 +12043,8 @@ function addPersonalNoteFromComposer() {
     pinned: false
   });
   ta.value = '';
+  if (tiEl) tiEl.value = '';
+  notesComposerGrow(ta);
   savePersonalNotesToStorage();
   renderPersonalNotesList();
   if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -11369,37 +12092,59 @@ function renderPersonalNotesList() {
   const wrap = document.getElementById('notes-list');
   const empty = document.getElementById('notes-empty');
   if (!wrap) return;
+
+  const q = (document.getElementById('notes-search')?.value || '').trim();
+  const clearBtn = document.getElementById('notes-search-clear');
+  if (clearBtn) clearBtn.style.display = q ? 'inline-flex' : 'none';
+
+  // Thống kê trên đầu trang tính trên toàn bộ ghi chú, không phụ thuộc bộ lọc
+  const all = personalNoteItems.slice();
+  const elTotal = document.getElementById('notes-stat-total');
+  const elPin = document.getElementById('notes-stat-pinned');
+  const elLast = document.getElementById('notes-stat-last');
+  if (elTotal) elTotal.textContent = all.length;
+  if (elPin) elPin.textContent = all.filter(n => n.pinned).length;
+  if (elLast) elLast.textContent = all.length ? notesRelTime(Math.max(...all.map(n => Number(n.ts) || 0))) : '—';
+
   const items = getPersonalNotesForDisplay();
   if (!items.length) {
     wrap.innerHTML = '';
+    const txt = document.getElementById('notes-empty-text');
+    if (txt) {
+      txt.innerHTML = q ? `Không tìm thấy ghi chú nào khớp <strong>${escHtml(q)}</strong>.`
+        : notesFilter === 'pinned' ? 'Chưa ghim ghi chú nào. Bấm biểu tượng ghim trên thẻ để đưa nó lên đầu.'
+        : notesFilter === 'today' ? 'Hôm nay chưa có ghi chú nào.'
+        : 'Chưa có ghi chú nào. Gõ vào ô phía trên rồi bấm <strong>Thêm</strong> để tạo dòng đầu tiên.';
+    }
     if (empty) empty.style.display = '';
     if (typeof lucide !== 'undefined') lucide.createIcons();
     return;
   }
   if (empty) empty.style.display = 'none';
+
   wrap.innerHTML = items.map(n => {
     const sid = escAttr(n.id);
+    const js = sid.replace(/'/g, "\\'");
     const d = new Date(n.ts || Date.now());
-    const timeStr = d.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-    const bodyEsc = escAttr(n.text || '');
-    const pinClass = n.pinned ? 'notes-pin-active' : '';
-    return `<div class="notes-card ${n.pinned ? 'pinned' : ''}" data-note-id="${sid}">
-      <div class="notes-card-meta">
-        <span class="notes-card-time">${escHtml(timeStr)}</span>
-        <div class="notes-card-actions">
-          <button type="button" class="notes-icon-btn ${pinClass}" title="${n.pinned ? 'Bỏ ghim' : 'Ghim lên đầu'}" onclick="togglePersonalNotePin('${sid.replace(/'/g, "\\'")}')">
-            <i data-lucide="pin" style="width:15px;height:15px"></i>
-          </button>
-          <button type="button" class="notes-icon-btn notes-del" title="Xóa" onclick="deletePersonalNote('${sid.replace(/'/g, "\\'")}')">
-            <i data-lucide="trash-2" style="width:15px;height:15px"></i>
-          </button>
+    const full = d.toLocaleString('vi-VN');
+    return `<article class="ncard ${n.pinned ? 'pinned' : ''}" data-note-id="${sid}" style="--nc:${notesToneOf(n.id)}">
+      <div class="ncard-head">
+        <span class="ncard-time" title="${escAttr(full)}"><i data-lucide="clock"></i>${escHtml(notesRelTime(n.ts))}</span>
+        <div class="ncard-tools">
+          <button type="button" class="ncard-btn" title="Chép nội dung" onclick="copyNoteText('${js}')"><i data-lucide="copy"></i></button>
+          <button type="button" class="ncard-btn ${n.pinned ? 'on' : ''}" title="${n.pinned ? 'Bỏ ghim' : 'Ghim lên đầu'}" onclick="togglePersonalNotePin('${js}')"><i data-lucide="pin"></i></button>
+          <button type="button" class="ncard-btn del" title="Xóa" onclick="deletePersonalNote('${js}')"><i data-lucide="trash-2"></i></button>
         </div>
       </div>
-      <textarea class="notes-body" data-note-id="${sid}" onblur="onPersonalNoteBlur('${sid.replace(/'/g, "\\'")}',this)">${bodyEsc}</textarea>
-    </div>`;
+      ${(() => { const pt = notesParse(n.text); return `
+      ${pt.title ? `<div class="ncard-title" onclick="startEditNote('${js}', this.parentElement.querySelector('.ncard-body'), true)">${notesRichText(pt.title, q)}</div>` : ''}
+      <div class="ncard-body" title="Bấm để sửa" onclick="startEditNote('${js}', this)">${notesRichText(pt.body || (pt.title ? '' : n.text), q)}</div>`; })()}
+      ${notesSmartTags(n.text)}
+    </article>`;
   }).join('');
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
+
 function renderPersonalNotes() {
   const lbl = document.getElementById('notes-user-label');
   if (lbl) {
@@ -12221,6 +12966,11 @@ let _barcodeTargetId = 'f-imei';
 const IMEI_OCR_MODELS = ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-3.1-flash-lite'];
 let _imeiTargetId = 'f-imei';
 
+// Chụp ảnh → AI đọc IMEI → điền thẳng vào ô tìm kiếm và lọc luôn
+function scanImeiToSearch(inputId) {
+  scanImeiByPhoto(inputId || 'mobile-search-input');
+}
+
 function scanImeiByPhoto(targetId) {
   _imeiTargetId = targetId || 'f-imei';
   const inp = document.getElementById('imei-photo-input');
@@ -12328,6 +13078,7 @@ async function onImeiPhotoPicked(input) {
     if (best && el) {
       el.value = best;
       el.dispatchEvent(new Event('input', { bubbles: true }));
+      if (_imeiTargetId.includes('search-input')) baoKetQuaTimImei(best);
     } else if (r.serial && el) {
       el.value = String(r.serial).trim();
       el.dispatchEvent(new Event('input', { bubbles: true }));
@@ -12341,6 +13092,16 @@ async function onImeiPhotoPicked(input) {
     if (el) { el.placeholder = phGoc; el.readOnly = false; }
     input.value = '';
   }
+}
+
+// Báo số phiếu tìm được sau khi chụp ảnh IMEI
+function baoKetQuaTimImei(imei) {
+  if (typeof showPage === 'function') showPage('list');
+  setTimeout(() => {
+    const rows = document.querySelectorAll('#ticket-tbody tr:not(.empty-row)').length;
+    toast(rows ? `Tìm thấy ${rows} phiếu có IMEI ${imei}` : `Không có phiếu nào có IMEI ${imei}`,
+          rows ? 'success' : 'error');
+  }, 150);
 }
 
 function startBarcodeScan(targetId = 'f-imei') {
