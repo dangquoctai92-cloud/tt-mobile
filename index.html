@@ -1577,6 +1577,134 @@ body.logged-in .chat-fab-wrap { display: block; }
   .notes-chip { flex: 1; text-align: center; padding: 8px 6px; }
 }
 
+/* ══════ TRANG CHAT NỘI BỘ ══════ */
+.pch-hero {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
+  background: linear-gradient(135deg, rgba(59,140,237,.16), rgba(108,77,246,.12) 60%, rgba(16,185,129,.10));
+  border: 1px solid rgba(255,255,255,.08); border-radius: 18px;
+  padding: 15px 18px; margin-bottom: 14px; box-shadow: 0 10px 34px rgba(0,0,0,.25);
+}
+.pch-hero-left { display: flex; align-items: center; gap: 13px; min-width: 0; }
+.pch-hero-icon {
+  width: 44px; height: 44px; flex-shrink: 0; border-radius: 14px; display: grid; place-items: center;
+  background: linear-gradient(140deg, #3b8ced, #6c4df6); color: #fff;
+  box-shadow: 0 8px 20px rgba(108,77,246,.42);
+}
+.pch-hero-title { font-size: 19px; font-weight: 800; color: var(--text); line-height: 1.15; }
+.pch-hero-sub { font-size: 12px; color: var(--text3); margin-top: 3px; display: flex; align-items: center; gap: 6px; }
+.pch-live { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,.18); }
+
+.pch-shell {
+  position: relative; display: flex; flex-direction: column; overflow: hidden;
+  height: calc(100vh - 250px); min-height: 380px;
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 18px;
+  box-shadow: 0 10px 34px rgba(0,0,0,.22);
+}
+#page-chat-messages {
+  flex: 1; overflow-y: auto; padding: 18px 16px 10px; display: flex; flex-direction: column; gap: 3px;
+  background:
+    radial-gradient(900px 380px at 15% -8%, rgba(59,140,237,.10), transparent 65%),
+    radial-gradient(700px 320px at 92% 108%, rgba(108,77,246,.10), transparent 60%),
+    var(--bg);
+  scrollbar-width: thin;
+}
+#page-chat-messages::-webkit-scrollbar { width: 6px; }
+#page-chat-messages::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 99px; }
+
+#page-chat .pchat-divider {
+  align-self: center; margin: 12px 0 8px; padding: 4px 12px; border-radius: 999px;
+  font-size: 10.5px; font-weight: 700; color: var(--text3);
+  background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.07);
+}
+
+#page-chat .pchat-msg { display: flex; gap: 9px; align-items: flex-end; max-width: 78%; margin-top: 10px; }
+#page-chat .pchat-msg.mine { align-self: flex-end; flex-direction: row-reverse; }
+#page-chat .pchat-msg.grouped { margin-top: 2px; }
+#page-chat .pchat-ava {
+  width: 30px; height: 30px; border-radius: 11px; flex-shrink: 0; display: grid; place-items: center;
+  font-size: 11px; font-weight: 800; color: #fff; box-shadow: 0 3px 10px rgba(0,0,0,.28);
+}
+#page-chat .pchat-msg.grouped .pchat-ava { visibility: hidden; height: 0; }
+#page-chat .pchat-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; max-width: 100%; }
+#page-chat .pchat-msg.mine .pchat-body { align-items: flex-end; }
+#page-chat .pchat-name { font-size: 10.5px; font-weight: 700; color: var(--text3); padding: 0 3px; }
+#page-chat .pchat-msg.grouped .pchat-name { display: none; }
+#page-chat .pchat-bubble {
+  position: relative; padding: 9px 13px; font-size: 13.5px; line-height: 1.55; word-break: break-word;
+  background: var(--bg3); border: 1px solid var(--border); color: var(--text);
+  border-radius: 16px 16px 16px 5px; box-shadow: 0 3px 12px rgba(0,0,0,.22);
+}
+#page-chat .pchat-msg.mine .pchat-bubble {
+  background: linear-gradient(135deg, #3b8ced, #6c4df6); border-color: transparent; color: #fff;
+  border-radius: 16px 16px 5px 16px; box-shadow: 0 5px 18px rgba(108,77,246,.38);
+}
+#page-chat .pchat-msg.grouped .pchat-bubble { border-radius: 16px; }
+#page-chat .pchat-bubble a { color: inherit; text-decoration: underline; }
+#page-chat .pchat-time { font-size: 10px; color: var(--text3); padding: 0 4px; opacity: 0; transition: opacity .15s; }
+#page-chat .pchat-msg:hover .pchat-time { opacity: 1; }
+#page-chat .chat-bubble-img { max-width: 260px; max-height: 220px; border-radius: 12px; }
+
+#page-chat .pchat-empty {
+  margin: auto; text-align: center; color: var(--text3); font-size: 13px; line-height: 1.9;
+}
+#page-chat .pchat-empty-ico {
+  width: 58px; height: 58px; margin: 0 auto 12px; border-radius: 18px; display: grid; place-items: center;
+  background: linear-gradient(140deg, rgba(59,140,237,.18), rgba(108,77,246,.14));
+  border: 1px solid rgba(59,140,237,.22); color: var(--accent);
+}
+#page-chat .pchat-empty-ico svg { width: 27px; height: 27px; }
+
+.pch-jump {
+  position: absolute; right: 18px; bottom: 92px; z-index: 5; display: none;
+  align-items: center; gap: 6px; padding: 8px 14px; border-radius: 999px; border: none;
+  background: linear-gradient(135deg, #3b8ced, #6c4df6); color: #fff; font-size: 12px; font-weight: 700;
+  font-family: var(--font); cursor: pointer; box-shadow: 0 8px 22px rgba(108,77,246,.45);
+}
+.pch-jump svg { width: 14px; height: 14px; }
+
+.pch-composer {
+  display: flex; gap: 9px; align-items: flex-end; padding: 12px 14px;
+  background: var(--bg2); border-top: 1px solid var(--border);
+}
+.pch-icon-btn {
+  width: 40px; height: 40px; flex-shrink: 0; border-radius: 13px; cursor: pointer;
+  background: var(--bg3); border: 1px solid var(--border); color: var(--text2);
+  display: flex; align-items: center; justify-content: center; transition: all .15s;
+}
+.pch-icon-btn:hover { color: var(--accent); border-color: rgba(59,140,237,.45); background: var(--bg2); }
+.pch-icon-btn svg { width: 18px; height: 18px; }
+.pch-input-wrap { flex: 1; position: relative; display: flex; align-items: flex-end; }
+#page-chat-input {
+  width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: 16px;
+  padding: 11px 15px; color: var(--text); font-family: var(--font); font-size: 13.5px;
+  outline: none; resize: none; max-height: 130px; line-height: 1.5; transition: border-color .18s;
+}
+#page-chat-input:focus { border-color: rgba(59,140,237,.6); background: var(--bg2); }
+.pch-send {
+  width: 44px; height: 44px; flex-shrink: 0; border-radius: 15px; border: none; cursor: pointer;
+  background: linear-gradient(135deg, #3b8ced, #6c4df6); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 18px rgba(108,77,246,.42); transition: transform .12s, box-shadow .18s;
+}
+.pch-send:hover { transform: translateY(-1px); box-shadow: 0 9px 24px rgba(108,77,246,.55); }
+.pch-send:active { transform: scale(.94); }
+.pch-send svg { width: 18px; height: 18px; }
+.pch-quick { display: flex; gap: 5px; padding: 0 14px 10px; flex-wrap: wrap; background: var(--bg2); }
+.pch-quick button {
+  background: var(--bg3); border: 1px solid var(--border); color: var(--text2);
+  border-radius: 999px; padding: 5px 11px; font-size: 11.5px; font-weight: 650;
+  font-family: var(--font); cursor: pointer; transition: all .15s;
+}
+.pch-quick button:hover { color: var(--text); border-color: rgba(59,140,237,.45); }
+
+@media (max-width: 768px) {
+  .pch-shell { height: calc(100vh - 265px); border-radius: 16px; }
+  #page-chat .pchat-msg { max-width: 88%; }
+  .pch-hero { padding: 13px 14px; }
+  .pch-hero-title { font-size: 17px; }
+  .pch-quick { display: none; }
+}
+
 /* Popup chat */
 .chat-popup {
   position: fixed; bottom: 94px; right: 24px; z-index: 1401;
@@ -3399,6 +3527,19 @@ body:has(.modal-overlay.open) #notes-fab-wrap {
       .pnc-main-btn svg { width: 17px; height: 17px; }
       .pnc-main-hint { font-size: 11px; color: var(--text3); text-align: center; margin-top: 8px; line-height: 1.6; }
 
+      .pnc-drop {
+        border: 2px dashed var(--border); border-radius: 14px; background: var(--bg3);
+        padding: 30px 18px; text-align: center; cursor: pointer; transition: all .18s;
+      }
+      .pnc-drop:hover, .pnc-drop.dragover { border-color: var(--accent); background: rgba(59,140,237,.07); }
+      .pnc-drop-ico {
+        width: 54px; height: 54px; margin: 0 auto 11px; border-radius: 16px; display: grid; place-items: center;
+        background: linear-gradient(140deg, rgba(239,68,68,.18), rgba(168,85,247,.14));
+        border: 1px solid rgba(239,68,68,.22); color: #ef4444;
+      }
+      .pnc-drop-ico svg { width: 25px; height: 25px; }
+      .pnc-drop-title { font-size: 13.5px; font-weight: 750; color: var(--text); }
+      .pnc-drop-sub { font-size: 11.5px; color: var(--text3); margin-top: 5px; line-height: 1.6; }
       .pnc-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
       .pnc-chip {
         flex: 1; min-width: 132px; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
@@ -3781,7 +3922,7 @@ body:has(.modal-overlay.open) #notes-fab-wrap {
           <div class="pnc-hero-icon"><i data-lucide="cpu" style="width:23px;height:23px"></i></div>
           <div>
             <div class="pnc-hero-title">Đọc Panic Full</div>
-            <div class="pnc-hero-sub">Cắm cáp → chọn thư mục panic trên máy khách → app đọc và chẩn đoán linh kiện hư ngay.</div>
+            <div class="pnc-hero-sub">Chụp hoặc dán ảnh màn hình Panic Full — AI đọc mã lỗi và chỉ ra linh kiện hư.</div>
           </div>
         </div>
         <div class="pnc-hero-right">
@@ -3821,88 +3962,44 @@ body:has(.modal-overlay.open) #notes-fab-wrap {
         <!-- CỘT TRÁI: NHẬP VÀ QUÉT LOG -->
         <div class="panic-col-input">
           <div class="pnc-card">
-            <div class="pnc-card-title"><i data-lucide="usb"></i> Lấy log từ máy khách</div>
-            <div class="pnc-steps">
-              <div class="pnc-step"><b>1</b><span>Cắm cáp, mở 3uTools → <strong style="color:var(--text)">Crash Logs → Details → Export</strong> ra 1 thư mục</span></div>
-              <div class="pnc-step"><b>2</b><span>Bấm nút xanh, chọn đúng thư mục vừa xuất (chỉ 1 lần)</span></div>
-              <div class="pnc-step"><b>3</b><span>App tự liệt kê file panic và canh thư mục — xuất thêm là tự hiện</span></div>
+            <div class="pnc-card-title"><i data-lucide="image"></i> Ảnh log lỗi</div>
+
+            <div id="panic-drop-zone" class="pnc-drop" onclick="document.getElementById('panic-image-picker').click()">
+              <div class="pnc-drop-ico"><i data-lucide="image-plus"></i></div>
+              <div class="pnc-drop-title hide-on-mobile">Dán ảnh (Ctrl+V), kéo thả hoặc bấm để chọn ảnh</div>
+              <div class="pnc-drop-title hide-on-pc">Bấm để chọn ảnh log trong máy</div>
+              <div class="pnc-drop-sub">Chụp màn hình Panic Full hoặc ảnh chụp log của máy khách</div>
+              <textarea id="panic-log-input" style="display:none"></textarea>
             </div>
 
-            <button type="button" class="pnc-main-btn" onclick="moThuMucPanic(true)">
-              <i data-lucide="folder-open"></i> Mở thư mục log đã xuất
-            </button>
-            <div class="pnc-main-hint" id="pnc-main-hint">
-              App nhớ thư mục này, lần sau chỉ cần bấm nút là xong.
-              <a href="#" onclick="event.preventDefault();document.getElementById('pnc-help').style.display=document.getElementById('pnc-help').style.display==='none'?'block':'none'" style="color:var(--accent);font-weight:700">Xem cách xuất log ›</a>
-            </div>
-            <div id="pnc-help" style="display:none;margin-top:10px;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px 14px;font-size:11.5px;line-height:1.85;color:var(--text2)">
-              <b style="color:var(--text)">Cách 1 — 3uTools (nhanh nhất):</b><br>
-              iDevice → Information → dòng <b>Crash Logs</b> → <b>Details</b> → chọn dòng <b>panic-full…</b> → <b>Export</b> → lưu vào 1 thư mục riêng (ví dụ <span style="font-family:var(--mono)">D:\PanicLog</span>).<br>
-              <b style="color:var(--text)">Cách 2 — từ chính iPhone:</b><br>
-              Cài đặt → Quyền riêng tư &amp; Bảo mật → Phân tích &amp; Cải tiến → Dữ liệu phân tích → chọn <b>panic-full…</b> → Chia sẻ → gửi qua Zalo/AirDrop về máy rồi lưu vào thư mục đó.<br>
-              <span style="color:var(--text3)">Lưu ý: trình duyệt không đọc thẳng được bộ nhớ iPhone (Apple chỉ mở phần ảnh DCIM), nên bước xuất log bằng 3uTools là bắt buộc.</span>
-            </div>
-
-            <div class="pnc-folder-bar" id="pnc-folder-bar" style="display:none">
-              <i data-lucide="folder" style="width:14px;height:14px"></i>
-              <span>Thư mục: <b id="pnc-folder-name">—</b></span>
-              <button type="button" onclick="panicForgetDir()">Đổi thư mục</button>
-            </div>
-            <div class="pnc-files" id="pnc-files"></div>
-
-            <input type="file" id="panic-file-picker" accept=".ips,.panic,.crash,.txt,.log,.json" style="display:none" onchange="onPanicFilePicked(this)">
-            <input type="file" id="panic-image-picker" accept="image/*" style="display:none" onchange="onPanicImagePicked(this)">
-            <div class="pnc-chips">
-              <button type="button" class="pnc-chip" onclick="document.getElementById('panic-file-picker').click()">
-                <i data-lucide="file-search"></i> Chọn tệp log
-              </button>
-              <button type="button" class="pnc-chip hide-on-pc" onclick="startPanicCamera()">
-                <i data-lucide="camera"></i> Chụp ảnh log
-              </button>
-              <button type="button" class="pnc-chip" onclick="document.getElementById('panic-image-picker').click()">
-                <i data-lucide="image"></i> Tải ảnh log
-              </button>
-              <button type="button" class="pnc-chip hide-on-mobile" id="btn-dcsd-connect" onclick="toggleDCSDConnection()">
-                <i data-lucide="link"></i> Cáp DCSD
-              </button>
-            </div>
-            <div id="dcsd-status" style="font-size:11px;color:var(--text3);margin-top:8px;display:none">
-              <span class="dcsd-status-dot"></span> Đang kết nối cáp DCSD...
-            </div>
-          </div>
-          <div class="section-card">
-            <div class="section-title">
-              <i data-lucide="file-text" style="width:14px;height:14px;margin-right:6px;vertical-align:middle"></i>
-              Nhập log lỗi Panic
-            </div>
-            
-            <div id="panic-drop-zone" class="panic-drop-zone">
-              <textarea id="panic-log-input" placeholder="Dán nội dung log Panic hoặc kéo thả tệp .ips/.panic vào đây..."></textarea>
-              <div class="drop-zone-overlay">
-                <i data-lucide="upload-cloud" style="width:36px;height:36px;margin-bottom:8px"></i>
-                <span>Thả tệp log vào đây để tự động đọc</span>
-              </div>
-            </div>
-
-            <!-- PREVIEW ẢNH CHỤP CAMERA -->
-            <div id="panic-image-preview-container" style="display:none;margin-top:14px;position:relative;border:1px solid var(--border);border-radius:8px;padding:8px;background:var(--bg3)">
-              <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">
-                <span>📷 Ảnh chụp log từ camera:</span>
+            <div id="panic-image-preview-container" style="display:none;margin-top:12px;position:relative;border:1px solid var(--border);border-radius:12px;padding:9px;background:var(--bg3)">
+              <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:7px;display:flex;justify-content:space-between;align-items:center">
+                <span>Ảnh log đã chọn</span>
                 <button type="button" class="btn btn-ghost" onclick="clearCapturedPhoto()" style="padding:2px 8px;font-size:10px;height:auto;color:#ef4444">Xóa ảnh</button>
               </div>
-              <img id="panic-captured-preview" src="" style="width:100%;max-height:220px;object-fit:contain;border-radius:6px">
+              <img id="panic-captured-preview" src="" style="width:100%;max-height:260px;object-fit:contain;border-radius:8px">
             </div>
 
-            <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
-              <button class="btn btn-blue" onclick="analyzePanicLog()" style="flex:1;min-width:140px">
-                <i data-lucide="play" style="width:13px;height:13px"></i> Phân tích lỗi
+            <input type="file" id="panic-image-picker" accept="image/*" style="display:none" onchange="onPanicImagePicked(this)">
+            <div class="pnc-chips">
+              <button type="button" class="pnc-chip hide-on-pc" onclick="startPanicCamera()">
+                <i data-lucide="camera"></i> Chụp ảnh trực tiếp
               </button>
-              <button class="btn btn-ghost" onclick="clearPanicInput()" style="width:40px;height:40px;padding:0;display:flex;align-items:center;justify-content:center" title="Xóa sạch">
-                <i data-lucide="trash-2" style="width:15px;height:15px;color:#ef4444"></i>
+              <button type="button" class="pnc-chip hide-on-mobile" onclick="document.getElementById('panic-image-picker').click()">
+                <i data-lucide="upload"></i> Tải ảnh lên
               </button>
             </div>
 
+            <div style="margin-top:13px;display:flex;gap:10px">
+              <button class="pnc-main-btn" onclick="analyzePanicLog()" style="flex:1">
+                <i data-lucide="play"></i> Phân tích lỗi
+              </button>
+              <button class="btn btn-ghost" onclick="clearPanicInput()" style="width:46px;height:46px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:12px" title="Xóa sạch">
+                <i data-lucide="trash-2" style="width:16px;height:16px;color:#ef4444"></i>
+              </button>
+            </div>
           </div>
+
         </div>
 
         <!-- CỘT PHẢI: KẾT QUẢ CHẨN ĐOÁN -->
@@ -3916,7 +4013,7 @@ body:has(.modal-overlay.open) #notes-fab-wrap {
             <div id="panic-result-empty" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text3);text-align:center;padding:40px 0">
               <i data-lucide="cpu" style="width:48px;height:48px;stroke-width:1;color:var(--text3);margin-bottom:12px"></i>
               <div style="font-weight:700;font-size:14px;color:var(--text2)">Chưa có dữ liệu phân tích</div>
-              <p style="font-size:12px;max-width:260px;margin-top:6px">Dán nội dung log, chọn tệp .ips hoặc chụp ảnh camera rồi bấm nút Phân tích lỗi để xem kết quả chẩn đoán phần cứng.</p>
+              <p style="font-size:12px;max-width:260px;margin-top:6px">Chụp hoặc dán ảnh log rồi bấm <b>Phân tích lỗi</b> để xem kết quả chẩn đoán phần cứng.</p>
             </div>
 
             <div id="panic-result-content" style="display:none;flex:1;flex-direction:column;gap:18px">
@@ -3937,6 +4034,26 @@ body:has(.modal-overlay.open) #notes-fab-wrap {
                 </div>
                 <div id="result-panic-source" style="font-size:11px;font-weight:700;background:var(--bg3);border:1px solid var(--border);padding:4px 10px;border-radius:12px;color:var(--text2)">
                   Bộ lọc Cục bộ
+                </div>
+              </div>
+
+              <!-- Độ tin cậy + bằng chứng -->
+              <div id="result-panic-trust" style="display:none;gap:10px;flex-direction:column">
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                  <span style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">Độ tin cậy</span>
+                  <div style="flex:1;min-width:120px;height:7px;border-radius:99px;background:var(--bg3);overflow:hidden">
+                    <div id="result-panic-conf-bar" style="height:100%;width:0;border-radius:99px;transition:width .4s"></div>
+                  </div>
+                  <span id="result-panic-conf-num" style="font-size:13px;font-weight:800;color:var(--text)">—</span>
+                </div>
+                <div id="result-panic-warning" style="display:none;font-size:12px;line-height:1.6;color:#fbbf24;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);border-radius:10px;padding:9px 12px"></div>
+                <div id="result-panic-evidence-box" style="display:none">
+                  <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:5px">Bằng chứng đọc được từ log/ảnh:</div>
+                  <ul id="result-panic-evidence" style="margin:0;padding-left:18px;font-family:var(--mono);font-size:11px;color:#a5f3fc;line-height:1.7"></ul>
+                </div>
+                <div id="result-panic-parts-box" style="display:none">
+                  <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:5px">Linh kiện nghi ngờ (xác suất giảm dần):</div>
+                  <div id="result-panic-parts" style="display:flex;gap:6px;flex-wrap:wrap"></div>
                 </div>
               </div>
 
@@ -3996,34 +4113,51 @@ body:has(.modal-overlay.open) #notes-fab-wrap {
 
     <!-- PAGE: CHAT -->
     <div class="page" id="page-chat">
-      <div class="page-title"><i data-lucide="message-circle" style="width:20px;height:20px;vertical-align:middle;margin-right:8px"></i>Chat Nội Bộ</div>
-      <div class="page-sub">Lịch sử tin nhắn nhóm</div>
-      <div id="chat-admin-toolbar" style="display:none;margin:0 0 12px 0;">
-        <button type="button" class="btn btn-red" onclick="adminClearAllChat()" style="padding:7px 14px;font-size:12px;display:inline-flex;align-items:center;gap:6px">
-          <i data-lucide="trash-2" style="width:14px;height:14px"></i> Xóa toàn bộ lịch sử chat (admin)
-        </button>
-      </div>
-      <div id="page-chat-body" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;display:flex;flex-direction:column;height:calc(100vh - 180px);">
-        <!-- Messages -->
-        <div id="page-chat-messages" style="flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:12px;background:#f0f2f5;">
-          <div id="page-chat-empty" style="text-align:center;color:#bbb;font-size:13px;padding:60px 0;line-height:2;">Chưa có tin nhắn nào.<br>Hãy bắt đầu! 👋</div>
+      <div class="pch-hero">
+        <div class="pch-hero-left">
+          <div class="pch-hero-icon"><i data-lucide="message-circle" style="width:22px;height:22px"></i></div>
+          <div>
+            <div class="pch-hero-title">Chat nội bộ</div>
+            <div class="pch-hero-sub"><span class="pch-live"></span> <span id="pch-status">Tin nhắn nhóm · tự đồng bộ 3 giây/lần</span></div>
+          </div>
         </div>
-        <!-- Input -->
-        <div style="display:flex;gap:8px;align-items:center;padding:14px 16px;background:var(--bg2);border-top:1px solid var(--border);">
+        <div id="chat-admin-toolbar" style="display:none">
+          <button type="button" class="btn btn-red" onclick="adminClearAllChat()" style="padding:8px 14px;font-size:12px;display:inline-flex;align-items:center;gap:6px;border-radius:12px">
+            <i data-lucide="trash-2" style="width:14px;height:14px"></i> Xóa toàn bộ lịch sử
+          </button>
+        </div>
+      </div>
+
+      <div class="pch-shell" id="page-chat-body">
+        <div id="page-chat-messages">
+          <div id="page-chat-empty" class="pchat-empty">
+            <div class="pchat-empty-ico"><i data-lucide="messages-square"></i></div>
+            Chưa có tin nhắn nào.<br>Nhắn câu đầu tiên cho cả nhóm đi!
+          </div>
+        </div>
+
+        <button type="button" class="pch-jump" id="pch-jump" onclick="pchatXuongCuoi()">
+          <i data-lucide="arrow-down"></i> <span id="pch-jump-text">Tin mới nhất</span>
+        </button>
+
+        <div class="pch-quick" id="pch-quick"></div>
+
+        <div class="pch-composer">
           <input type="file" id="page-chat-file-image" accept="image/*" style="display:none" onchange="onPageChatPickImage(this)">
           <input type="file" id="page-chat-file-any" style="display:none" onchange="onPageChatPickFile(this)">
-          <button type="button" title="Gửi ảnh" onclick="document.getElementById('page-chat-file-image').click()" style="width:40px;height:40px;border-radius:50%;background:var(--bg3);border:1.5px solid var(--border);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-            <i data-lucide="image" style="width:18px;height:18px"></i>
+          <button type="button" class="pch-icon-btn" title="Gửi ảnh" onclick="document.getElementById('page-chat-file-image').click()">
+            <i data-lucide="image"></i>
           </button>
-          <button type="button" title="Gửi tệp" onclick="document.getElementById('page-chat-file-any').click()" style="width:40px;height:40px;border-radius:50%;background:var(--bg3);border:1.5px solid var(--border);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-            <i data-lucide="paperclip" style="width:18px;height:18px"></i>
+          <button type="button" class="pch-icon-btn" title="Gửi tệp" onclick="document.getElementById('page-chat-file-any').click()">
+            <i data-lucide="paperclip"></i>
           </button>
-          <textarea id="page-chat-input" placeholder="Nhắn gì đó..." rows="1"
-            style="flex:1;background:var(--bg3);border:1.5px solid var(--border);border-radius:22px;padding:10px 18px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;resize:none;max-height:80px;line-height:1.4;transition:border-color 0.2s;"
-            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendPageChatMsg();}"
-            oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,80)+'px'"></textarea>
-          <button onclick="sendPageChatMsg()" style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#3b8ced,#6c4df6);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 3px 10px rgba(108,77,246,0.4);transition:transform 0.15s;">
-            <i data-lucide="send" style="width:17px;height:17px"></i>
+          <div class="pch-input-wrap">
+            <textarea id="page-chat-input" placeholder="Nhắn gì đó…" rows="1"
+              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendPageChatMsg();}"
+              oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,130)+'px'"></textarea>
+          </div>
+          <button class="pch-send" onclick="sendPageChatMsg()" title="Gửi (Enter)">
+            <i data-lucide="send"></i>
           </button>
         </div>
       </div>
@@ -4034,7 +4168,7 @@ body:has(.modal-overlay.open) #notes-fab-wrap {
       <div class="page-title"><i data-lucide="settings" style="width:20px;height:20px;vertical-align:middle;margin-right:8px"></i>Cài Đặt</div>
       <div class="page-sub">Cấu hình hệ thống và Google Drive</div>
       <div class="section-card">
-        <div class="section-title"><i data-lucide="flask-conical" style="width:14px;height:14px;margin-right:6px;vertical-align:middle"></i>Phếu ví dụ (test giao diện)</div>
+        <div class="section-title"><i data-lucide="flask-conical" style="width:14px;height:14px;margin-right:6px;vertical-align:middle"></i>Phiếu ví dụ (test giao diện)</div>
         <p style="font-size:12.5px;color:var(--text2);line-height:1.6;margin-bottom:10px">
           Tạo 5 phiếu giả để thử giao diện / nhấn giữ chọn nhiều. Chỉ hiện trên máy này,
           <b style="color:var(--text)">không lưu, không đồng bộ lên Google Sheets</b>. Tắt app mở lại là hết.
@@ -6413,6 +6547,7 @@ function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('page-' + id).classList.add('active');
+  if (id === 'panic' && typeof initPanicPage === 'function') initPanicPage();
   document.getElementById('nav-' + id)?.classList.add('active');
 
   // Sync bottom nav
@@ -10891,204 +11026,42 @@ function initPanicDragAndDrop() {
     zone.classList.remove('dragover');
     
     const file = e.dataTransfer.files[0];
-    if (file) {
-      readPanicFile(file);
-    }
+    if (!file) return;
+    if (file.type.startsWith('image/')) dungAnhPanic(file);
+    else readPanicFile(file);
   });
+}
+
+// Dùng chung cho: chọn ảnh, kéo thả ảnh, dán ảnh từ clipboard
+function dungAnhPanic(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    panicCapturedBase64 = e.target.result;
+    const img = document.getElementById('panic-captured-preview');
+    const box = document.getElementById('panic-image-preview-container');
+    if (img && box) { img.src = panicCapturedBase64; box.style.display = 'block'; }
+    toast('Đã nạp ảnh log — bấm Phân tích lỗi', 'success');
+  };
+  reader.onerror = () => toast('Không đọc được ảnh này!', 'error');
+  reader.readAsDataURL(file);
 }
 
 function initPanicClipboardPaste() {
-  const input = document.getElementById('panic-log-input');
-  if (!input || input.dataset.pasteInitialized) return;
-  input.dataset.pasteInitialized = 'true';
-  
-  input.addEventListener('paste', (e) => {
+  if (document.body.dataset.panicPaste) return;
+  document.body.dataset.panicPaste = '1';
+  document.addEventListener('paste', e => {
+    const page = document.getElementById('page-panic');
+    if (!page || !page.classList.contains('active')) return;
     const items = (e.clipboardData || e.originalEvent?.clipboardData)?.items;
     if (!items) return;
-    
-    for (let item of items) {
+    for (const item of items) {
       if (item.type.indexOf('image') === 0) {
         const file = item.getAsFile();
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            const base64 = event.target.result;
-            panicCapturedBase64 = base64;
-            
-            const previewImg = document.getElementById('panic-captured-preview');
-            const previewContainer = document.getElementById('panic-image-preview-container');
-            if (previewImg && previewContainer) {
-              previewImg.src = base64;
-              previewContainer.style.display = 'block';
-            }
-            
-            toast('Đã dán ảnh log lỗi thành công!', 'success');
-          };
-          reader.readAsDataURL(file);
-          e.preventDefault(); // Chặn dán ký tự rác
-          break;
-        }
+        if (file) { dungAnhPanic(file); e.preventDefault(); }
+        return;
       }
     }
   });
-}
-
-/* ══════ CẮM CÁP → MỞ THẲNG THƯ MỤC PANIC ══════
-   Trình duyệt không tự chui vào bộ nhớ máy được, nên luồng là:
-   cắm cáp (máy hiện ra như một ổ đĩa) → bấm nút → chọn thư mục 1 lần → app nhớ luôn,
-   những lần sau chỉ cần cắm cáp + cấp quyền là nó tự liệt kê file panic mới nhất. */
-const PANIC_DIR_DB = 'ttm-panic';
-const PANIC_DIR_KEY = 'lastDir';
-
-function panicIdb() {
-  return new Promise((res, rej) => {
-    const rq = indexedDB.open(PANIC_DIR_DB, 1);
-    rq.onupgradeneeded = () => rq.result.createObjectStore('h');
-    rq.onsuccess = () => res(rq.result);
-    rq.onerror = () => rej(rq.error);
-  });
-}
-async function panicSaveDir(handle) {
-  try { const db = await panicIdb(); db.transaction('h', 'readwrite').objectStore('h').put(handle, PANIC_DIR_KEY); } catch (e) {}
-}
-async function panicLoadDir() {
-  try {
-    const db = await panicIdb();
-    return await new Promise(res => {
-      const rq = db.transaction('h', 'readonly').objectStore('h').get(PANIC_DIR_KEY);
-      rq.onsuccess = () => res(rq.result || null);
-      rq.onerror = () => res(null);
-    });
-  } catch (e) { return null; }
-}
-async function panicForgetDir() {
-  try { const db = await panicIdb(); db.transaction('h', 'readwrite').objectStore('h').delete(PANIC_DIR_KEY); } catch (e) {}
-  clearInterval(_panicWatch); _panicWatch = null; _panicDir = null; _panicSeen = new Set();
-  const bar = document.getElementById('pnc-folder-bar');
-  if (bar) bar.style.display = 'none';
-  const list = document.getElementById('pnc-files');
-  if (list) list.innerHTML = '';
-  toast('Đã quên thư mục đã chọn', 'info');
-}
-
-function laFilePanic(name) {
-  const n = String(name || '').toLowerCase();
-  if (/\.(ips|panic|crash)$/.test(n)) return true;
-  return /panic|stacks|kernel/.test(n) && /\.(txt|log|json|gz|synced)$/.test(n);
-}
-
-// Quét thư mục (tối đa 3 cấp) tìm mọi file panic
-async function quetThuMucPanic(dir, capSau = 0, ketQua = []) {
-  for await (const [ten, h] of dir.entries()) {
-    if (ketQua.length >= 60) break;
-    if (h.kind === 'file') {
-      if (laFilePanic(ten)) {
-        try { const f = await h.getFile(); ketQua.push({ handle: h, name: ten, size: f.size, ts: f.lastModified }); }
-        catch (e) {}
-      }
-    } else if (capSau < 2) {
-      const t = ten.toLowerCase();
-      if (/(panic|log|analytic|diagnos|crash|dcim|download)/.test(t) || capSau === 0) {
-        try { await quetThuMucPanic(h, capSau + 1, ketQua); } catch (e) {}
-      }
-    }
-  }
-  return ketQua;
-}
-
-async function moThuMucPanic(dungLai) {
-  // Máy/trình duyệt không hỗ trợ chọn thư mục → mở thẳng trình chọn tệp
-  if (!window.showDirectoryPicker) {
-    document.getElementById('panic-file-picker')?.click();
-    return;
-  }
-  try {
-    let dir = dungLai ? await panicLoadDir() : null;
-    if (dir) {
-      const q = await dir.queryPermission({ mode: 'read' });
-      if (q !== 'granted' && (await dir.requestPermission({ mode: 'read' })) !== 'granted') dir = null;
-    }
-    if (!dir) {
-      dir = await window.showDirectoryPicker({ id: 'panic-logs', mode: 'read', startIn: 'downloads' });
-      await panicSaveDir(dir);
-    }
-    await hienFilePanic(dir);
-  } catch (e) {
-    if (e && e.name === 'AbortError') return;
-    console.warn('[panic dir]', e);
-    toast('Không mở được thư mục — thử nút "Chọn tệp log" nhé!', 'error');
-    document.getElementById('panic-file-picker')?.click();
-  }
-}
-
-async function hienFilePanic(dir, imLang) {
-  const list = document.getElementById('pnc-files');
-  const bar = document.getElementById('pnc-folder-bar');
-  const barName = document.getElementById('pnc-folder-name');
-  if (!list) return;
-  list.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:8px 2px">⏳ Đang quét thư mục…</div>';
-  if (bar) bar.style.display = 'flex';
-  if (barName) barName.textContent = dir.name || 'Thư mục đã chọn';
-
-  let files = [];
-  try { files = await quetThuMucPanic(dir); } catch (e) {}
-  files.sort((a, b) => b.ts - a.ts);
-  _panicFiles = files;
-  _panicSeen = new Set(files.map(f => f.name + f.ts));
-  canhThuMucPanic(dir);
-
-  if (!files.length) {
-    list.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:10px 2px;line-height:1.7">'
-      + 'Không thấy tệp panic nào trong thư mục này.<br>iPhone: <b>Cài đặt → Quyền riêng tư → Phân tích & Cải tiến → Dữ liệu phân tích</b>, '
-      + 'chọn tệp <b>panic-full…</b> rồi Chia sẻ sang máy tính, sau đó chọn lại thư mục chứa tệp đó.</div>';
-    return;
-  }
-  list.innerHTML = files.map((f, i) => {
-    const kb = f.size > 1024 * 1024 ? (f.size / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(f.size / 1024)) + ' KB';
-    const d = new Date(f.ts || Date.now()).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-    const moi = i === 0 ? '<span class="pnc-file-tag">MỚI NHẤT</span>' : '';
-    return `<button type="button" class="pnc-file" onclick="chonFilePanic(${i})">
-      <span class="pnc-file-ico"><i data-lucide="file-text"></i></span>
-      <span style="min-width:0">
-        <span class="pnc-file-name">${escHtml(f.name)}</span>
-        <span class="pnc-file-meta">${d} · ${kb}</span>
-      </span>${moi}
-    </button>`;
-  }).join('');
-  if (window.lucide) lucide.createIcons();
-  if (!imLang) toast('Thấy ' + files.length + ' tệp panic — bấm để đọc', 'success');
-}
-
-let _panicFiles = [];
-let _panicDir = null, _panicWatch = null, _panicSeen = new Set();
-
-// Canh thư mục: xuất thêm log từ 3uTools là app tự thấy, khỏi bấm lại
-function canhThuMucPanic(dir) {
-  _panicDir = dir;
-  clearInterval(_panicWatch);
-  _panicWatch = setInterval(async () => {
-    const page = document.getElementById('page-panic');
-    if (!page || !page.classList.contains('active') || !_panicDir) return;
-    try {
-      if ((await _panicDir.queryPermission({ mode: 'read' })) !== 'granted') return;
-      const files = await quetThuMucPanic(_panicDir);
-      const moi = files.filter(f => !_panicSeen.has(f.name + f.ts));
-      if (moi.length) {
-        await hienFilePanic(_panicDir, true);
-        toast('Có ' + moi.length + ' log panic mới trong thư mục!', 'success');
-      }
-    } catch (e) {}
-  }, 4000);
-}
-async function chonFilePanic(i) {
-  const f = _panicFiles[i];
-  if (!f) return;
-  try {
-    const file = await f.handle.getFile();
-    readPanicFile(file);
-  } catch (e) {
-    toast('Không đọc được tệp này (máy đã rút cáp?)', 'error');
-  }
 }
 
 function onPanicFilePicked(input) {
@@ -11100,26 +11073,8 @@ function onPanicFilePicked(input) {
 
 function onPanicImagePicked(input) {
   const file = input.files[0];
-  if (file) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const base64 = e.target.result;
-      panicCapturedBase64 = base64;
-      
-      const previewImg = document.getElementById('panic-captured-preview');
-      const previewContainer = document.getElementById('panic-image-preview-container');
-      if (previewImg && previewContainer) {
-        previewImg.src = base64;
-        previewContainer.style.display = 'block';
-      }
-      
-      toast('Đã tải ảnh log thành công!', 'success');
-    };
-    reader.onerror = () => {
-      toast('Không thể đọc tệp ảnh này!', 'error');
-    };
-    reader.readAsDataURL(file);
-  }
+  if (file) dungAnhPanic(file);
+  input.value = '';
 }
 
 function readPanicFile(file) {
@@ -11517,112 +11472,142 @@ function analyzePanicLocally(logText) {
 }
 
 // --- GỬI REQUEST GEMINI AI ---
-async function callGeminiAI(logText, base64Image, apiKey, modelName) {
-  modelName = modelName || 'gemini-3.6-flash';
-  const isMultimodal = !!base64Image;
-  let prompt = '';
-  let inlineData = null;
-  
-  if (isMultimodal) {
-    prompt = `Ảnh chụp log lỗi iPhone/iPad. OCR rồi chẩn đoán.
-Chỉ trả JSON, KHÔNG viết gì thêm:
-{
-  "code": "VD: TG0B",
-  "deviceModel": "Đời máy nhận diện được (ví dụ: iPhone 13 Pro Max), hoặc để trống nếu không xác định được",
-  "cause": "Tối đa 15 từ. VD: Lỗi cảm biến nhiệt pin, IC Tigris hỏng",
-  "solution": "Tối đa 15 từ. VD: Thay IC Tigris U3300 hoặc hàn lại chân",
-  "steps": [
-    "Đo điện trở chân 5,6 IC U3300",
-    "Kiểm tra tụ C3301 có ngắn mạch không",
-    "Thay IC Tigris U3300 nếu chập",
-    "Test cảm biến nhiệt sau khi thay"
-  ],
-  "errorLine": "Dòng log lỗi trong ảnh"
-}
-QUY TẮC: cause và solution mỗi cái tối đa 15 từ. Mỗi step tối đa 12 từ, viết như mệnh lệnh ngắn.`;
-    
-    // Tách phần prefix base64 data:image/jpeg;base64,
-    const b64Data = base64Image.split(',')[1];
-    inlineData = {
-      mimeType: 'image/jpeg',
-      data: b64Data
-    };
-  } else {
-    prompt = `Phân tích log Panic iPhone/iPad.
-Chỉ trả JSON, KHÔNG viết gì thêm:
-{
-  "code": "VD: TG0B",
-  "deviceModel": "Đời máy nhận diện được (ví dụ: iPhone 13 Pro Max), hoặc để trống nếu không xác định được",
-  "cause": "Tối đa 15 từ. VD: Lỗi cảm biến nhiệt pin, IC Tigris hỏng",
-  "solution": "Tối đa 15 từ. VD: Thay IC Tigris U3300 hoặc hàn lại chân",
-  "steps": [
-    "Đo điện trở chân 5,6 IC U3300",
-    "Kiểm tra tụ C3301 có ngắn mạch không",
-    "Thay IC Tigris U3300 nếu chập",
-    "Test cảm biến nhiệt sau khi thay"
-  ],
-  "errorLine": "Dòng log chính xác gây panic"
-}
-QUY TẮC: cause và solution mỗi cái tối đa 15 từ. Mỗi step tối đa 12 từ, viết ngắn như mệnh lệnh.
+// Bảng tra chuẩn: ép AI bám vào kiến thức đã kiểm chứng thay vì tự bịa mã lỗi / tên IC
+const PANIC_REF = `TG0B|Cảm biến nhiệt pin (trong cụm pin) → thay pin zin, đo SMBUS_BATT_SDA/SCL, hàn lại socket pin
+TP0D,TP1a,TP2a|Cảm biến nhiệt vùng CPU/PMU → kiểm tra IC nguồn, keo tản nhiệt, chập nguồn
+Prs0|Cảm biến áp suất khí quyển nằm trên cáp đuôi sạc (X trở lên) → thay cụm đuôi sạc zin
+Mic2|Mic phụ 2 (đuôi sạc hoặc cáp nguồn tùy đời) → cách ly test, thay cáp chứa mic2
+AOP|Always-On Processor: mất tín hiệu/pulse cụm mic-đuôi sạc → cách ly đuôi sạc, cáp mic, đo đường AOP
+SOCD|SOC watchdog: CPU/nguồn chính mất phản hồi → kiểm tra nguồn lõi, chân CPU, main ngấm nước
+WDT,watchdog|Watchdog timeout: một linh kiện treo bus → cách ly từng cáp ngoại vi
+thermalmonitord|Giám sát nhiệt không nhận phản hồi cảm biến → cáp sạc, cáp nguồn/âm lượng, cáp NFC
+nvme,NAND|Ổ cứng/NVMe lỗi giao tiếp → đóng lại chân NAND, đo PP0V9_NAND/PP1V8_NAND, thay ổ
+i2c,write8,read8|Chập bus I2C do ngoại vi → cách ly màn hình, Face ID, camera trước, đuôi sạc; đo I2C_SDA/SCL
+ANE|Neural Engine lỗi → thường lỗi CPU/nguồn lõi, kiểm tra nguồn PP_ANE
+gpu,agx|GPU treo → main ngấm nước/nứt bi CPU, kiểm nguồn GPU
+Face ID,pearl|Cụm Face ID → test cáp dot projector/flood, IC Face ID
+smc,PMU|Quản lý nguồn → đo nguồn PMU, kiểm tra chập đường ra`;
 
-Log:
-${logText}`;
+const PANIC_SCHEMA = {
+  type: 'OBJECT',
+  properties: {
+    code: { type: 'STRING' },
+    deviceModel: { type: 'STRING' },
+    confidence: { type: 'INTEGER' },
+    evidence: { type: 'ARRAY', items: { type: 'STRING' } },
+    errorLine: { type: 'STRING' },
+    cause: { type: 'STRING' },
+    solution: { type: 'STRING' },
+    parts: { type: 'ARRAY', items: { type: 'STRING' } },
+    steps: { type: 'ARRAY', items: { type: 'STRING' } },
+    warning: { type: 'STRING' }
+  },
+  required: ['code', 'confidence', 'errorLine', 'cause', 'solution', 'steps']
+};
+
+function buildPanicPrompt(logText, coAnh) {
+  return `Bạn là kỹ thuật viên sửa main iPhone/iPad 15 năm kinh nghiệm, đọc thành thạo panic log của Apple (panic-full .ips, panicString, SOCD, WDT, sensor panic).
+Nhiệm vụ: ${coAnh ? 'ĐỌC KỸ CHỮ TRONG ẢNH (OCR) rồi chẩn đoán.' : 'Đọc log dưới đây rồi chẩn đoán.'}
+
+NGUYÊN TẮC BẮT BUỘC — sai là vô dụng:
+1. CHỈ dùng chữ có thật trong ${coAnh ? 'ảnh' : 'log'}. Tuyệt đối không bịa mã lỗi, tên IC, mã linh kiện (U3300, C3301…) nếu không đọc thấy hoặc không suy ra được chắc chắn từ bảng tra bên dưới.
+2. "evidence" phải là các đoạn chữ COPY NGUYÊN VĂN từ ${coAnh ? 'ảnh' : 'log'} (1–3 đoạn) làm bằng chứng cho kết luận. Không có bằng chứng thì không được kết luận.
+3. Đời máy: chỉ điền khi thấy Model Identifier (iPhone10,3 / iPad8,6…) hoặc tên máy ghi rõ. Không đoán theo cảm tính. Không chắc thì để "".
+4. Chấm "confidence" (0-100) thật thà theo thang: 85-100 = mã lỗi hiện nguyên văn và khớp bảng tra; 60-84 = suy ra từ ngữ cảnh log; 30-59 = log thiếu/mờ, chỉ đoán hướng; 0-29 = không đọc được gì đáng tin.
+5. Nếu ${coAnh ? 'ảnh mờ, thiếu phần panicString, hoặc chỉ thấy vài chữ' : 'log cụt, thiếu panicString'} → code = "KHÔNG ĐỦ DỮ LIỆU", confidence < 30, và "warning" ghi rõ cần chụp/lấy lại phần nào.
+6. Giải pháp phải theo thứ tự rẻ → đắt: cách ly / vệ sinh / thay cáp trước, đụng main sau cùng. Cấm khuyên chung chung kiểu "mang ra tiệm" hay "thay main".
+7. Viết tiếng Việt kỹ thuật của thợ Việt Nam, rõ ràng, không vòng vo: cause ≤ 40 từ, solution ≤ 40 từ, 4-8 step, mỗi step ≤ 20 từ dạng mệnh lệnh đo/kiểm cụ thể (nêu rõ đo chân nào, đường nào, trị số mong đợi nếu biết).
+
+BẢNG TRA MÃ PANIC (ưu tiên bám vào đây):
+${PANIC_REF}
+
+Trả về đúng JSON theo schema: code (mã lỗi + tên cảm biến/khối), deviceModel, confidence, evidence[], errorLine (dòng log gây crash, nguyên văn), cause, solution, parts[] (linh kiện nghi ngờ, xếp theo xác suất), steps[] (4-8 bước kiểm tra thực tế, xếp theo thứ tự làm), warning (rỗng nếu dữ liệu đủ tốt).${coAnh ? '' : '\n\nLOG:\n' + logText}`;
+}
+
+// Gemini hay bị cắt ngang giữa chừng (hết token / thinking ăn mất) -> vá lại JSON cụt thay vì vứt đi
+function docJsonGemini(raw) {
+  if (!raw) return null;
+  let t = String(raw).replace(/```json/gi, '').replace(/```/g, '').trim();
+  const i = t.indexOf('{');
+  if (i > 0) t = t.slice(i);
+  try { return JSON.parse(t); } catch (e) {}
+  const j = t.lastIndexOf('}');
+  if (j > 0) { try { return JSON.parse(t.slice(0, j + 1)); } catch (e) {} }
+  // Vá: bỏ phần dở dang cuối rồi tự đóng ngoặc
+  let s = t;
+  if (((s.match(/"/g) || []).length) % 2) s = s.slice(0, s.lastIndexOf('"'));
+  s = s.replace(/,\s*"[^"]*"\s*:\s*$/, '').replace(/,\s*[^,{}\[\]]*$/, '').replace(/[,\s]+$/, '');
+  let ngoac = 0, vuong = 0;
+  for (const ch of s) {
+    if (ch === '{') ngoac++; else if (ch === '}') ngoac--;
+    else if (ch === '[') vuong++; else if (ch === ']') vuong--;
   }
-  
-  const payload = {
-    contents: [
-      {
-        parts: [
-          { text: prompt }
-        ]
-      }
-    ]
-  };
-  
-  if (isMultimodal && inlineData) {
-    payload.contents[0].parts.push({
-      inlineData: inlineData
-    });
+  s += ']'.repeat(Math.max(0, vuong)) + '}'.repeat(Math.max(0, ngoac));
+  try { return JSON.parse(s); } catch (e) { return null; }
+}
+
+async function callGeminiAI(logText, base64Image, apiKey, modelName) {
+  const isMultimodal = !!base64Image;
+  const parts = [{ text: buildPanicPrompt(logText, isMultimodal) }];
+  if (isMultimodal) {
+    parts.push({ inlineData: { mimeType: 'image/jpeg', data: base64Image.split(',')[1] } });
   }
-  
-  const headers = {
-    'Content-Type': 'application/json'
-  };
-  
-  const cleanKey = (apiKey || '').trim();
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(cleanKey)}`;
-  
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: headers,
-    body: JSON.stringify(payload)
+
+  const taoPayload = (tokens) => ({
+    contents: [{ parts }],
+    generationConfig: {
+      temperature: 0,           // không sáng tạo — cần đúng, không cần hay
+      topP: 0.1,
+      maxOutputTokens: tokens,  // để thoải mái cho model suy nghĩ kỹ rồi trả JSON đầy đủ
+      responseMimeType: 'application/json',
+      responseSchema: PANIC_SCHEMA
+    }
   });
-  
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`Gemini API Error: ${response.status} - ${errText}`);
+
+  // Model chính lỗi/quá tải thì tự nhảy sang model dự phòng thay vì báo hỏng
+  const models = [modelName || 'gemini-3.6-flash', 'gemini-flash-latest', 'gemini-2.5-flash']
+    .filter((m, i, a) => m && a.indexOf(m) === i);
+
+  let lastErr = null, duPhong = null;
+  for (const model of models) {
+    for (const tokens of [32768, 65536]) {         // lần 2 nới thêm nếu vẫn bị cắt ngang
+      try {
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent((apiKey || '').trim())}`,
+          { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(taoPayload(tokens)) }
+        );
+        if (!res.ok) {
+          const t = await res.text();
+          lastErr = new Error(`Gemini API Error: ${res.status} - ${t}`);
+          if (res.status === 400 || res.status === 403) throw lastErr;   // sai key/sai request thì đổi model cũng vô ích
+          break;                                    // 429/500/503: đổi model
+        }
+        const data = await res.json();
+        const cand = data.candidates?.[0];
+        const raw = (cand?.content?.parts || []).map(x => x.text || '').join('');
+        const lyDoDung = cand?.finishReason || '';
+        const kq = docJsonGemini(raw);
+        if (kq && (kq.code || kq.cause)) {
+          const duXai = kq.solution && Array.isArray(kq.steps) && kq.steps.length;
+          if (lyDoDung !== 'MAX_TOKENS' && duXai) return kq;
+          // Bị cắt ngang: giữ tạm bản vá rồi thử lại với hạn mức token cao hơn
+          kq.warning = (kq.warning ? kq.warning + ' ' : '') + 'Kết quả bị cắt ngang, có thể thiếu vài bước kiểm tra.';
+          if (typeof kq.confidence === 'number') kq.confidence = Math.min(kq.confidence, 75);
+          if (!duPhong) duPhong = kq;
+          continue;
+        }
+        console.warn('[Gemini panic] không đọc được JSON', { model, tokens, lyDoDung, raw: String(raw).slice(0, 400) });
+        lastErr = new Error('AI trả về dữ liệu không đọc được (' + (lyDoDung || 'không rõ') + ')');
+        if (lyDoDung !== 'MAX_TOKENS') break;       // không phải do cụt token thì nới cũng vô ích
+      } catch (e) {
+        lastErr = e;
+        if (/40[03]/.test(String(e.message))) return Promise.reject(lastErr);
+        break;
+      }
+    }
   }
-  
-  const data = await response.json();
-  const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!rawText) {
-    throw new Error('Gemini không trả về kết quả.');
-  }
-  
-  // Parse JSON từ text của Gemini (bóc tách nếu có ```json)
-  let cleanText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-  try {
-    return JSON.parse(cleanText);
-  } catch(e) {
-    console.warn('[Gemini response is not JSON]', rawText);
-    // Fallback nếu Gemini trả về text thường không đúng format JSON
-    return {
-      code: 'GEMINI_AI',
-      cause: 'Chẩn đoán từ AI: ' + rawText.substring(0, 500),
-      solution: 'Xem chẩn đoán chi tiết phía trên.',
-      errorLine: 'Đã phân tích từ log / hình ảnh thành công.'
-    };
-  }
+  if (duPhong) return duPhong;
+  throw lastErr || new Error('Không gọi được Gemini');
 }
 
 // --- THỰC HIỆN PHÂN TÍCH LOG ---
@@ -11764,6 +11749,44 @@ function displayPanicResult(result, sourceName) {
       elModelContainer.style.display = 'block';
     } else {
       elModelContainer.style.display = 'none';
+    }
+  }
+
+  // Độ tin cậy — cho thợ biết khi nào nên tin, khi nào phải chụp lại log
+  const box = document.getElementById('result-panic-trust');
+  const bar = document.getElementById('result-panic-conf-bar');
+  const num = document.getElementById('result-panic-conf-num');
+  const warn = document.getElementById('result-panic-warning');
+  const evBox = document.getElementById('result-panic-evidence-box');
+  const evList = document.getElementById('result-panic-evidence');
+  const ptBox = document.getElementById('result-panic-parts-box');
+  const ptList = document.getElementById('result-panic-parts');
+  if (box && bar && num) {
+    const c = Number(result.confidence);
+    if (!isNaN(c) && c > 0) {
+      box.style.display = 'flex';
+      const mau = c >= 85 ? '#22c55e' : c >= 60 ? '#fbbf24' : '#ef4444';
+      bar.style.width = Math.min(100, c) + '%';
+      bar.style.background = mau;
+      num.textContent = c + '%';
+      num.style.color = mau;
+    } else {
+      box.style.display = 'none';
+    }
+    if (warn) {
+      const w = (result.warning || '').trim();
+      warn.style.display = w ? 'block' : 'none';
+      warn.textContent = w;
+    }
+    if (evBox && evList) {
+      const ev = Array.isArray(result.evidence) ? result.evidence.filter(Boolean) : [];
+      evBox.style.display = ev.length ? 'block' : 'none';
+      evList.innerHTML = ev.map(e => `<li>${escHtml(String(e))}</li>`).join('');
+    }
+    if (ptBox && ptList) {
+      const ps = Array.isArray(result.parts) ? result.parts.filter(Boolean) : [];
+      ptBox.style.display = ps.length ? 'block' : 'none';
+      ptList.innerHTML = ps.map((x, i) => `<span style="font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:999px;background:${i === 0 ? 'rgba(239,68,68,.14)' : 'var(--bg3)'};border:1px solid ${i === 0 ? 'rgba(239,68,68,.3)' : 'var(--border)'};color:${i === 0 ? '#ef4444' : 'var(--text2)'}">${escHtml(String(x))}</span>`).join('');
     }
   }
 
@@ -12779,6 +12802,7 @@ function _renderPageChatFromMemory() {
   if (!wrap) return;
   wrap.querySelectorAll('.pchat-msg, .pchat-divider').forEach(e => e.remove());
   pageChatRendered.clear();
+  if (typeof initPageChatUI === 'function') initPageChatUI();
   if (chatMessages.length) {
     if (empty) empty.style.display = 'none';
     chatMessages.forEach(m => appendPageChatMsg(m));
@@ -12884,41 +12908,106 @@ async function renderPageChat() {
   } catch(e) { console.warn('[renderPageChat fetch]', e); }
 }
 
+// Chữ cái đầu làm avatar (đẹp hơn icon người chung chung)
+function pchatChuCai(ten) {
+  const t = String(ten || '?').trim().split(/\s+/).slice(-2).map(w => w[0] || '').join('');
+  return (t || '?').toUpperCase();
+}
+function pchatXuongCuoi() {
+  const wrap = document.getElementById('page-chat-messages');
+  if (wrap) wrap.scrollTo({ top: wrap.scrollHeight, behavior: 'smooth' });
+  _pchatChuaDoc = 0;
+  capNhatNutXuong();
+}
+let _pchatChuaDoc = 0;
+function pchatODuoi() {
+  const w = document.getElementById('page-chat-messages');
+  if (!w) return true;
+  return w.scrollHeight - w.scrollTop - w.clientHeight < 120;
+}
+function capNhatNutXuong() {
+  const btn = document.getElementById('pch-jump');
+  const txt = document.getElementById('pch-jump-text');
+  if (!btn) return;
+  const hien = !pchatODuoi();
+  btn.style.display = hien ? 'flex' : 'none';
+  if (txt) txt.textContent = _pchatChuaDoc > 0 ? _pchatChuaDoc + ' tin mới' : 'Tin nhắn mới nhất';
+}
+function initPageChatUI() {
+  const wrap = document.getElementById('page-chat-messages');
+  if (wrap && !wrap.dataset.uiInit) {
+    wrap.dataset.uiInit = '1';
+    wrap.addEventListener('scroll', () => { if (pchatODuoi()) _pchatChuaDoc = 0; capNhatNutXuong(); });
+  }
+  const quick = document.getElementById('pch-quick');
+  if (quick && !quick.dataset.init) {
+    quick.dataset.init = '1';
+    const mau = ['Ok anh 👍', 'Đã nhận máy', 'Máy xong rồi nhé', 'Đang chờ linh kiện', 'Gọi khách giúp anh', '5 phút nữa qua'];
+    quick.innerHTML = mau.map(t => `<button type="button" onclick="pchatChenNhanh('${t.replace(/'/g, "\\'")}')">${escHtml(t)}</button>`).join('');
+  }
+}
+function pchatChenNhanh(t) {
+  const inp = document.getElementById('page-chat-input');
+  if (!inp) return;
+  inp.value = inp.value ? (inp.value.trim() + ' ' + t) : t;
+  inp.focus();
+  inp.dispatchEvent(new Event('input'));
+}
+
 function appendPageChatMsg(msg) {
   if (pageChatRendered.has(msg.id)) return;
   pageChatRendered.add(msg.id);
   const wrap = document.getElementById('page-chat-messages');
   if (!wrap) return;
+  initPageChatUI();
+  const oDuoiTruocKhiThem = pchatODuoi();
+
   const myUser = AUTH.currentUser?.username;
   const isMine = msg.username === myUser;
   const d = new Date(msg.ts);
-  const timeStr = d.toLocaleTimeString('vi-VN', { hour:'2-digit', minute:'2-digit' });
-  const dateStr = d.toLocaleDateString('vi-VN', { day:'2-digit', month:'2-digit', year:'numeric' });
-  const todayStr = new Date().toLocaleDateString('vi-VN', { day:'2-digit', month:'2-digit', year:'numeric' });
+  const timeStr = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+  const dateStr = d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const homNay = new Date();
+  const homQua = new Date(); homQua.setDate(homQua.getDate() - 1);
+  const nhan = dateStr === homNay.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }) ? 'Hôm nay'
+    : dateStr === homQua.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }) ? 'Hôm qua' : dateStr;
   const dname = chatDisplayName(msg);
 
-  // Date divider
   const lastDiv = lastDateDividerEl(wrap, 'pchat-divider');
   if (!lastDiv || lastDiv.dataset.date !== dateStr) {
     const sep = document.createElement('div');
     sep.className = 'pchat-divider';
     sep.dataset.date = dateStr;
-    sep.style.cssText = 'text-align:center;font-size:11px;color:#999;padding:4px 0;font-weight:600;';
-    sep.textContent = dateStr === todayStr ? 'Hôm nay' : dateStr;
+    sep.textContent = nhan;
     wrap.appendChild(sep);
   }
 
+  // Gộp tin nhắn liên tiếp cùng người trong vòng 5 phút cho gọn mắt
+  const truoc = wrap.querySelector('.pchat-msg:last-of-type');
+  const gopChung = truoc && truoc.dataset.user === msg.username
+    && Math.abs(msg.ts - Number(truoc.dataset.ts || 0)) < 5 * 60000
+    && !wrap.lastElementChild?.classList?.contains('pchat-divider');
+
   const row = document.createElement('div');
-  row.className = 'pchat-msg chat-msg' + (isMine ? ' mine' : '');
+  row.className = 'pchat-msg' + (isMine ? ' mine' : '') + (gopChung ? ' grouped' : '');
   row.dataset.id = msg.id;
+  row.dataset.user = msg.username || '';
+  row.dataset.ts = msg.ts;
   row.innerHTML = `
-    <div class="chat-msg-avatar chat-msg-avatar-icon" style="background:${avatarColor(msg.username)}"><i data-lucide="user"></i></div>
-    <div class="chat-msg-body">
-      <div class="chat-msg-name">${escHtml(dname)}${isMine ? ' <span class="chat-you-tag">(bạn)</span>' : ''}</div>
-      <div class="chat-msg-bubble">${formatChatBubbleInnerHTML(msg)}</div>
-      <div class="chat-msg-time">${timeStr}</div>
+    <div class="pchat-ava" style="background:${avatarColor(msg.username)}">${escHtml(pchatChuCai(dname))}</div>
+    <div class="pchat-body">
+      <div class="pchat-name">${escHtml(dname)}${isMine ? ' · bạn' : ''}</div>
+      <div class="pchat-bubble chat-msg-bubble">${formatChatBubbleInnerHTML(msg)}</div>
+      <div class="pchat-time">${timeStr}</div>
     </div>`;
   wrap.appendChild(row);
+
+  if (oDuoiTruocKhiThem || isMine) {
+    setTimeout(() => wrap.scrollTo({ top: wrap.scrollHeight }), 30);
+  } else {
+    _pchatChuaDoc++;
+  }
+  capNhatNutXuong();
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
