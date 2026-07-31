@@ -5761,15 +5761,6 @@ function loadStorage() {
     const s = localStorage.getItem('suachua_settings');
     if (s) SETTINGS = { ...SETTINGS, ...JSON.parse(s) };
   } catch(e) {}
-  // Tự động điền API Key vừa khởi tạo thành công để người dùng không cần copy-paste thủ công
-  if (!SETTINGS.geminiApiKey) {
-    try {
-      SETTINGS.geminiApiKey = atob('QVEuQWI4Uk42S1FNbUFwc0JqaUlPOVQxUEM1S0xkbkFiOTBWdlZpZm0yWXh4TUxURWhyOHc=');
-    } catch(e) {
-      SETTINGS.geminiApiKey = '';
-    }
-    saveStorage();
-  }
   // Tự động cập nhật nếu phát hiện URL cũ của code trước đó đã thay đổi hoặc chưa có lịch sử URL code
   // (IMG_SLOTS được khai báo phía trên loadStorage — xem ghi chú ở đó)
   const knownOldUrls = [
