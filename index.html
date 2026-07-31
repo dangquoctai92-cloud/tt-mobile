@@ -11556,7 +11556,7 @@ async function callGeminiAI(logText, base64Image, apiKey, modelName) {
   });
 
   // Model chính lỗi/quá tải thì tự nhảy sang model dự phòng thay vì báo hỏng
-  const models = [modelName || 'gemini-3.6-flash', 'gemini-flash-latest', 'gemini-2.5-flash']
+  const models = [modelName || 'gemini-3.6-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite']
     .filter((m, i, a) => m && a.indexOf(m) === i);
 
   let lastErr = null, duPhong = null;
@@ -13043,7 +13043,7 @@ let _barcodeTargetId = 'f-imei';
 
 // ══════ CHỤP ẢNH → AI TỰ ĐỌC IMEI ══════
 // Thay cho quét mã vạch: chụp thẳng tem/màn hình *#06#, Gemini đọc rồi điền vào ô.
-const IMEI_OCR_MODELS = ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-3.1-flash-lite'];
+const IMEI_OCR_MODELS = ['gemini-flash-latest', 'gemini-3.6-flash', 'gemini-3.1-flash-lite'];
 let _imeiTargetId = 'f-imei';
 
 // Chụp ảnh → AI đọc IMEI → điền thẳng vào ô tìm kiếm và lọc luôn
