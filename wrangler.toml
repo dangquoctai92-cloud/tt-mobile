@@ -1,0 +1,10 @@
+# Cloudflare Pages configuration: binds to the external Durable Object Worker (tt-mobile-config-do).
+# Deploy workers/config-do-worker FIRST so script_name = "tt-mobile-config-do" exists before deploying Pages.
+name = "tt-mobile"
+pages_build_output_dir = "."
+compatibility_date = "2026-09-01"
+
+[[durable_objects.bindings]]
+name = "TT_CONFIG_DO"
+class_name = "TTConfigDurableObject"
+script_name = "tt-mobile-config-do"
