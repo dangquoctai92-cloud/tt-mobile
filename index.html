@@ -5636,6 +5636,9 @@ function ttRenderSharedConfigUi() {
   const metaText = document.getElementById('shared-config-meta-text');
   const gemStatus = document.getElementById('cfg-gemini-status');
   const authBox = document.getElementById('cfg-admin-auth-box');
+  const reloadButton = document.getElementById('btn-reload-shared-config');
+  const sharedConfigUnavailable = SETTINGS.sharedConfigApiSupported === false;
+  if (reloadButton) reloadButton.style.display = sharedConfigUnavailable ? 'none' : '';
   if (metaText) {
     if (SETTINGS.sharedConfigVersion > 0) {
       metaText.textContent = 'Phiên bản chung: v' + SETTINGS.sharedConfigVersion +
@@ -5643,7 +5646,7 @@ function ttRenderSharedConfigUi() {
         (SETTINGS.sharedConfigUpdatedBy ? ' (' + SETTINGS.sharedConfigUpdatedBy + ')' : '') +
         (SETTINGS.sharedDatasetId ? ' · Dataset: ' + SETTINGS.sharedDatasetId : '');
     } else if (SETTINGS.sharedConfigApiSupported === false) {
-      metaText.textContent = 'Chế độ cục bộ (chưa gắn API cấu hình máy chủ).';
+      metaText.textContent = 'Cài đặt kết nối trên thiết bị này.';
     } else {
       metaText.textContent = 'Chưa có cấu hình chung trên máy chủ (v0).';
     }
@@ -5669,7 +5672,8 @@ function ttRenderSharedConfigUi() {
         : 'Xác thực quản trị khởi tạo (thiết lập sẵn trên máy chủ)';
     }
     const activeCfgSess = ttGetActiveConfigSaveSession();
-    authBox.style.display = (activeCfgSess && !activeCfgSess.expired && activeCfgSess.session.role === 'admin') ? 'none' : '';
+    authBox.style.display = sharedConfigUnavailable ||
+      (activeCfgSess && !activeCfgSess.expired && activeCfgSess.session.role === 'admin') ? 'none' : '';
   }
 }
 function ttShouldApplySharedConfigVersion(nextVersion) {
@@ -5732,6 +5736,11 @@ function ttApplySharedConfig(cfg, opts = {}) {
   return true;
 }
 async function ttFetchSharedConfigFromServer(opts = {}) {
+  // GitHub Pages serves static files. Apps Script sync uses its own URL.
+  if (location.origin === 'https://dangquoctai92-cloud.github.io') {
+    SETTINGS.sharedConfigApiSupported = false;
+    return { supported: false };
+  }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), opts.timeoutMs || 3500);
   try {
@@ -14994,4 +15003,3 @@ if ('serviceWorker' in navigator) {
 <script src="./gemini-panic-models.js?v=20261123-pwa-1840"></script>
 </body>
 </html>
-
