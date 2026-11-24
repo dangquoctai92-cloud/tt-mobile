@@ -1,11 +1,9 @@
 /* T&T Mobile app-shell cache v6: atomic versioned release bundle; only public static assets, never API keys or customer data. */
-const TT_BUILD_ID = '20261124-pwa-1030';
+const TT_BUILD_ID = '20261124-pwa-2040';
 const TT_SHELL_CACHE = 'tt-mobile-shell-' + TT_BUILD_ID;
 const TT_SHELL_ASSETS = [
   './index.html',
-  './gemini-panic-models.js?v=' + TT_BUILD_ID,
   './tt-candidate-data.js?v=' + TT_BUILD_ID,
-  './gemini-panic-models.js',
   './tt-candidate-data.js',
   './manifest.json',
   './logo-192.png',
@@ -70,7 +68,6 @@ self.addEventListener('fetch', event => {
   const scopePath = new URL(self.registration.scope).pathname;
   const isHome = url.pathname === scopePath || url.pathname === scopePath + 'index.html';
   const staticPaths = new Set([
-    scopePath + 'gemini-panic-models.js',
     scopePath + 'tt-candidate-data.js',
     scopePath + 'manifest.json',
     scopePath + 'logo-192.png',
