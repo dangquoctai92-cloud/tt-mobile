@@ -116,7 +116,11 @@
     else if (state === 'models') {
       if (selectedModelId && !modelById(selectedModelId)) {
         label = 'Model đã lưu không còn khả dụng'; tone = 'error';
-      } else { label = 'Đã tải danh sách model'; tone = 'success'; }
+      } else if (!selectedModelId) {
+        label = 'Chưa chọn model Panic (vào Cài đặt)'; tone = 'neutral';
+      } else {
+        label = 'Panic AI: ' + selectedModelId; tone = 'success';
+      }
     } else label = 'Đã lưu key — chưa xác minh';
     badge.replaceChildren();
     if (tone === 'error') {
@@ -167,7 +171,7 @@
   }
   function renderSettingsModelControl(current, hasKey, msg) {
     const appVal = typeof SETTINGS !== 'undefined' && SETTINGS ? idOf(SETTINGS.imeiOcrModel || '') : '';
-    fillModelSelect(document.getElementById('cfg-gemini-app-model'), appVal, 'Chọn model cho toàn app...', hasKey);
+    fillModelSelect(document.getElementById('cfg-gemini-app-model'), appVal, 'Mặc định (gemini-flash-latest)', hasKey);
     fillModelSelect(document.getElementById('cfg-gemini-panic-model'), selectedModelId, 'Chọn model cho Panic Full...', hasKey);
     const cfgStatus = document.getElementById('cfg-gemini-model-status');
     const cfgRefresh = document.getElementById('btn-refresh-gemini-models');
@@ -623,6 +627,13 @@
       render();
       throw offlineErr;
     }
+    if (!selectedModelId && typeof SETTINGS !== 'undefined' && SETTINGS && SETTINGS.geminiModel) {
+      selectedModelId = idOf(SETTINGS.geminiModel);
+    }
+    if (selectedModelId && (!cache || cache.expiresAt <= Date.now() || !modelById(selectedModelId))) {
+      await refreshModels(false);
+      assertSession(run, (apiKey || '').trim());
+    }
     const requestedModelId = selected();
     if (idOf(modelName) !== requestedModelId)
       throw error('Lựa chọn model đã thay đổi. Vui lòng thử lại.');
@@ -689,7 +700,7 @@
       verifiedText: verifiedFallback(idOf(m.name), 'text'),
       verifiedImage: verifiedFallback(idOf(m.name), 'image')
     })),
-    getSelected: () => selectedModelId,
+    getSelected: () => selectedModelId || idOf(typeof SETTINGS !== 'undefined' && SETTINGS ? SETTINGS.geminiModel : ''),
     getCredentialEpoch: () => { syncKey(); return credentialEpoch; },
     getState: currentState,
     getMessage: () => analysisMessage || discoveryMessage,

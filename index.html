@@ -5085,10 +5085,10 @@ body:has(.modal-overlay.open) #notes-fab-wrap {
   </div>
 </div>
 
-<script src="./tt-candidate-data.js?v=20261124-pwa-1025"></script>
+<script src="./tt-candidate-data.js?v=20261124-pwa-1030"></script>
 <script>
 // ══════ PWA BUILD COMPATIBILITY GATE & DRAFT RECOVERY UI ══════
-const TT_EXPECTED_BUILD_ID = '20261124-pwa-1025';
+const TT_EXPECTED_BUILD_ID = '20261124-pwa-1030';
 const TT_REQUIRED_HELPER_METHODS = [
   'isReady', 'isBlocked', 'getView', 'bootstrap', 'hydrate',
   'read', 'readCanonical', 'onHydrate', 'getRecoveryStatus',
@@ -10695,12 +10695,16 @@ function clearGeminiKey() {
 }
 function onSettingsGeminiAppModelChange(modelId) {
   const id = String(modelId || '').trim();
-  if (!id) return;
   SETTINGS.imeiOcrModel = id;
   saveMetadataOnly();
   try { window.geminiPanicModels?.render?.(); } catch (_) {}
-  setGeminiMsg('✔ Đã chọn model <b>toàn app</b>: <b>' + escHtml(id) + '</b>.', 'var(--green)');
-  toast('Đã chọn model toàn app: ' + id, 'success');
+  setGeminiMsg(
+    id
+      ? ('✔ Đã chọn model <b>toàn app</b>: <b>' + escHtml(id) + '</b>.')
+      : '✔ Đã đặt model <b>toàn app</b> về mặc định (<b>' + escHtml(IMEI_OCR_MODELS[0]) + '</b>).',
+    'var(--green)'
+  );
+  toast(id ? ('Đã chọn model toàn app: ' + id) : ('Model toàn app: ' + IMEI_OCR_MODELS[0]), 'success');
 }
 function onSettingsGeminiPanicModelChange(modelId) {
   const id = String(modelId || '').trim();
@@ -13021,7 +13025,7 @@ async function analyzePanicLog() {
         : 'Chưa có kết luận AI. Không chuyển model âm thầm.';
       elSolution.textContent = isOffline
         ? 'Kết nối lại mạng hoặc bấm "Cục bộ (.ips)" nếu muốn phân tích tệp .ips/.json offline.'
-        : 'Kiểm tra quyền API, quota hoặc chọn model khác sau khi làm mới danh sách.';
+        : 'Kiểm tra quyền API, quota hoặc vào Cài đặt → Cấu hình Gemini AI chọn model Panic Full khác rồi thử lại.';
       elSource.textContent = isOffline ? 'Offline — chưa kết nối Gemini AI' : 'Gemini AI — chưa có phản hồi chẩn đoán';
     }
   } else {
@@ -15089,7 +15093,7 @@ async function askGeminiForImei(b64, key, outerSignal) {
   // Never silently switch models when the selected one fails.
   // The user may opt into an explicit bounded fallback in settings.
   const config=typeof SETTINGS==='object'&&SETTINGS?SETTINGS:null;
-  const chosen=String(config?.imeiOcrModel||config?.geminiModel||IMEI_OCR_MODELS[0]||'').trim();
+  const chosen=String(config?.imeiOcrModel||IMEI_OCR_MODELS[0]||'').trim();
   if(!chosen)throw new Error('Chưa chọn model OCR');
   const models=(!config||config.ocrFallbackEnabled===true)?
     Array.from(new Set([chosen,...IMEI_OCR_MODELS])):[chosen];
@@ -15440,7 +15444,7 @@ if ('serviceWorker' in navigator) {
     });
   })();
 </script>
-<script src="./gemini-panic-models.js?v=20261124-pwa-1025"></script>
+<script src="./gemini-panic-models.js?v=20261124-pwa-1030"></script>
 </body>
 </html>
 
