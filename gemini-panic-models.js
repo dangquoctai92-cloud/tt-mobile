@@ -139,41 +139,51 @@
     badge.style.borderColor = color[2];
     badge.title = analysisMessage || discoveryMessage || label;
   }
+  function fillModelSelect(selEl, selectedVal, blankText, hasKey) {
+    if (!selEl) return;
+    selEl.replaceChildren();
+    const blank = document.createElement('option');
+    blank.value = '';
+    blank.textContent = models.length
+      ? blankText
+      : (hasKey ? 'Chưa tải danh sách — bấm Tải danh sách model' : 'Nhập API Key trước để tải model');
+    selEl.appendChild(blank);
+    for (const model of models) {
+      const id = idOf(model.name);
+      const o = document.createElement('option');
+      o.value = id;
+      o.textContent = (model.displayName || id) + ' (' + id + ')';
+      selEl.appendChild(o);
+    }
+    const val = idOf(selectedVal || '');
+    if (val && !modelById(val)) {
+      const savedOpt = document.createElement('option');
+      savedOpt.value = val;
+      savedOpt.textContent = val + (models.length ? ' (không còn trong danh sách)' : ' (đã lưu)');
+      selEl.appendChild(savedOpt);
+    }
+    selEl.value = val || '';
+    selEl.disabled = !hasKey && !val;
+  }
   function renderSettingsModelControl(current, hasKey, msg) {
-    const cfgSel = document.getElementById('cfg-gemini-model');
+    const appVal = typeof SETTINGS !== 'undefined' && SETTINGS ? idOf(SETTINGS.imeiOcrModel || '') : '';
+    fillModelSelect(document.getElementById('cfg-gemini-app-model'), appVal, 'Chọn model cho toàn app...', hasKey);
+    fillModelSelect(document.getElementById('cfg-gemini-panic-model'), selectedModelId, 'Chọn model cho Panic Full...', hasKey);
     const cfgStatus = document.getElementById('cfg-gemini-model-status');
     const cfgRefresh = document.getElementById('btn-refresh-gemini-models');
-    if (cfgSel) {
-      cfgSel.replaceChildren();
-      const blank = document.createElement('option');
-      blank.value = '';
-      blank.textContent = models.length
-        ? 'Chọn model Gemini...'
-        : (hasKey ? 'Chưa tải danh sách — bấm Tải danh sách model' : 'Nhập API Key trước để tải model');
-      cfgSel.appendChild(blank);
-      for (const model of models) {
-        const id = idOf(model.name);
-        const o = document.createElement('option');
-        o.value = id;
-        o.textContent = (model.displayName || id) + ' (' + id + ')';
-        cfgSel.appendChild(o);
-      }
-      if (selectedModelId && !current) {
-        const savedOpt = document.createElement('option');
-        savedOpt.value = selectedModelId;
-        savedOpt.textContent = selectedModelId + (models.length ? ' (không còn trong danh sách)' : ' (đã lưu)');
-        cfgSel.appendChild(savedOpt);
-      }
-      cfgSel.value = selectedModelId || '';
-      cfgSel.disabled = !hasKey && !selectedModelId;
-    }
     if (cfgStatus) {
-      cfgStatus.textContent = selectedModelId && current
-        ? 'Đang dùng cho toàn app & Panic Full: ' + (current.displayName || selectedModelId) + ' (' + selectedModelId + ').'
-        : msg;
-      cfgStatus.style.color = discoveryState === 'error'
-        ? 'var(--red)'
-        : (selectedModelId && current ? 'var(--green)' : 'var(--text3)');
+      const appReady = !!(appVal && modelById(appVal));
+      const panicReady = !!(selectedModelId && current);
+      if (discoveryState === 'error') {
+        cfgStatus.textContent = msg;
+        cfgStatus.style.color = 'var(--red)';
+      } else if (appReady || panicReady) {
+        cfgStatus.textContent = 'Toàn app: ' + (appVal || 'Mặc định') + ' · Panic Full: ' + (selectedModelId || 'Chưa chọn') + '.';
+        cfgStatus.style.color = panicReady ? 'var(--green)' : 'var(--text2)';
+      } else {
+        cfgStatus.textContent = msg;
+        cfgStatus.style.color = 'var(--text3)';
+      }
     }
     if (cfgRefresh) cfgRefresh.disabled = discoveryState === 'loading' || !hasKey;
   }
@@ -195,10 +205,11 @@
     else if (discoveryState === 'empty') msg = 'API không trả về model generateContent phù hợp.';
     else if (analysisState === 'partial') msg = 'Kết quả chưa đủ schema: không cấp bằng chứng tương thích để fallback.';
     else if (selectedModelId && !current && models.length) msg = 'Model đã lưu không còn trong danh sách. Chọn lại trước khi phân tích.';
-    else if (!selectedModelId && models.length) msg = 'Chọn model để dùng cho toàn app & Panic Full.';
+    else if (!selectedModelId && models.length) msg = 'Đã tải ' + models.length + ' model. Chọn model cho Toàn app & Panic Full ở trên.';
     else if (models.length) msg = 'Đã tải ' + models.length + ' model (cache 10 phút).';
     else msg = 'Đã lưu key, chưa xác minh kết nối.';
     renderSettingsModelControl(current, hasKey, msg);
+    renderBadge();
     if (!list || !status || !select || !label) return;
     label.textContent = selectedModelId
       ? (current ? ((current.displayName || selectedModelId) + ' (' + selectedModelId + ')')
@@ -247,14 +258,12 @@
     if (refresh) refresh.disabled = discoveryState === 'loading' || !hasKey;
     const cb = document.getElementById('gemini-allow-fallback');
     if (cb) cb.checked = SETTINGS.geminiAllowFallback === true;
-    renderBadge();
   }
   function storePreference() {
     // Updating Settings alone must not rewrite unrelated ticket/image DB.
     let saved = {};
     try { saved = JSON.parse(localStorage.getItem('suachua_settings') || '{}') || {}; } catch (_) {}
     saved.geminiModel = SETTINGS.geminiModel;
-    saved.imeiOcrModel = SETTINGS.geminiModel;
     saved.geminiAllowFallback = SETTINGS.geminiAllowFallback === true;
     localStorage.setItem('suachua_settings', JSON.stringify(saved));
   }
@@ -273,7 +282,6 @@
     }
     selectedModelId = id;
     SETTINGS.geminiModel = id;
-    SETTINGS.imeiOcrModel = id;
     storePreference();
     render();
     return true;
@@ -413,37 +421,38 @@
     const menu = document.getElementById('gemini-dropdown-menu');
     const list = document.getElementById('gemini-menu-list');
     const select = document.getElementById('gemini-model-select');
-    if (!trigger || !menu || !list || !select) return;
     if (!initialized) {
       selectedModelId = idOf(SETTINGS.geminiModel || '');
       keyReference = activeCredentialToken();
-      trigger.addEventListener('click', event => {
-        event.stopPropagation();
-        const open = menu.classList.toggle('show');
-        trigger.setAttribute('aria-expanded', String(open));
-        if (open && (!cache || cache.expiresAt <= Date.now()) && !discoveryPending)
-          void refreshModels(false);
-      });
-      list.addEventListener('click', event => {
-        const target = event.target.closest('[data-model]');
-        if (!target || !selectModel(target.dataset.model)) return;
-        menu.classList.remove('show');
-        trigger.setAttribute('aria-expanded', 'false');
-      });
-      select.addEventListener('change', () => selectModel(select.value));
-      document.getElementById('gemini-model-refresh').addEventListener('click', event => {
-        event.stopPropagation(); void refreshModels(true);
-      });
-      document.getElementById('gemini-allow-fallback').addEventListener('change', event => {
-        SETTINGS.geminiAllowFallback = event.target.checked === true;
-        storePreference(); render();
-      });
-      document.addEventListener('click', event => {
-        if (!event.target.closest('#gemini-custom-dropdown')) {
+      if (trigger && menu && list && select) {
+        trigger.addEventListener('click', event => {
+          event.stopPropagation();
+          const open = menu.classList.toggle('show');
+          trigger.setAttribute('aria-expanded', String(open));
+          if (open && (!cache || cache.expiresAt <= Date.now()) && !discoveryPending)
+            void refreshModels(false);
+        });
+        list.addEventListener('click', event => {
+          const target = event.target.closest('[data-model]');
+          if (!target || !selectModel(target.dataset.model)) return;
           menu.classList.remove('show');
           trigger.setAttribute('aria-expanded', 'false');
-        }
-      });
+        });
+        select.addEventListener('change', () => selectModel(select.value));
+        document.getElementById('gemini-model-refresh')?.addEventListener('click', event => {
+          event.stopPropagation(); void refreshModels(true);
+        });
+        document.getElementById('gemini-allow-fallback')?.addEventListener('change', event => {
+          SETTINGS.geminiAllowFallback = event.target.checked === true;
+          storePreference(); render();
+        });
+        document.addEventListener('click', event => {
+          if (!event.target.closest('#gemini-custom-dropdown')) {
+            menu.classList.remove('show');
+            trigger.setAttribute('aria-expanded', 'false');
+          }
+        });
+      }
       const save = window.saveSettings;
       if (typeof save === 'function') {
         window.saveSettings = function() {
@@ -671,6 +680,7 @@
   window.geminiPanicModels = {
     refresh: refreshModels,
     choose: selectModel,
+    render,
     beginAnalysis,
     isCurrentAnalysis,
     getModels: () => models.map(m => ({
