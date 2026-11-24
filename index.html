@@ -4384,6 +4384,18 @@ body:has(.modal-overlay.open) #notes-fab-wrap {
             <input type="password" id="cfg-gemini-key" placeholder="Dán Gemini API Key (để trống nếu giữ khóa hiện tại)" autocomplete="new-password" onkeydown="if(event.key==='Enter'){event.preventDefault();saveGeminiSettings();}" style="font-family:var(--mono);font-size:12px">
             <div id="cfg-gemini-status" style="margin-top:6px;font-size:12px;color:var(--text2)">Trạng thái khóa Gemini: Chưa cài đặt</div>
           </div>
+          <div class="field field-span2" style="margin-top:4px">
+            <label for="cfg-gemini-model">Model Gemini mặc định (áp dụng cho toàn app &amp; Panic Full)</label>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <select id="cfg-gemini-model" onchange="onSettingsGeminiModelChange(this.value)" style="flex:1;min-width:220px;font-size:12.5px">
+                <option value="">Chọn model Gemini...</option>
+              </select>
+              <button type="button" class="btn btn-ghost" id="btn-refresh-gemini-models" onclick="refreshGeminiModelsFromSettings()" style="white-space:nowrap;padding:7px 12px;font-size:12px">
+                <i data-lucide="refresh-cw" style="width:13px;height:13px"></i> Tải danh sách model
+              </button>
+            </div>
+            <div id="cfg-gemini-model-status" style="margin-top:6px;font-size:11.5px;color:var(--text3)">Lưu API Key để tải danh sách model từ Google Gemini.</div>
+          </div>
         </div>
         <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
           <button type="button" class="btn btn-blue" id="btn-save-gemini-settings" onclick="saveGeminiSettings()">
@@ -5083,10 +5095,10 @@ body:has(.modal-overlay.open) #notes-fab-wrap {
   </div>
 </div>
 
-<script src="./tt-candidate-data.js?v=20261124-pwa-0955"></script>
+<script src="./tt-candidate-data.js?v=20261124-pwa-1015"></script>
 <script>
 // ══════ PWA BUILD COMPATIBILITY GATE & DRAFT RECOVERY UI ══════
-const TT_EXPECTED_BUILD_ID = '20261124-pwa-0955';
+const TT_EXPECTED_BUILD_ID = '20261124-pwa-1015';
 const TT_REQUIRED_HELPER_METHODS = [
   'isReady', 'isBlocked', 'getView', 'bootstrap', 'hydrate',
   'read', 'readCanonical', 'onHydrate', 'getRecoveryStatus',
@@ -10305,6 +10317,11 @@ function loadSettingsForm() {
   const geminiKeyEl = document.getElementById('cfg-gemini-key');
   if (geminiKeyEl) geminiKeyEl.value = '';
   ttRenderSharedConfigUi();
+  if (typeof window.initGeminiCustomDropdown === 'function') {
+    window.initGeminiCustomDropdown();
+  } else if (window.geminiPanicModels && typeof window.geminiPanicModels.refresh === 'function' && ttGetGeminiClientToken()) {
+    void window.geminiPanicModels.refresh(false);
+  }
   
   const user = AUTH.currentUser;
   if (user) {
@@ -10685,6 +10702,33 @@ function clearGeminiKey() {
   if (typeof ttRenderSharedConfigUi === 'function') ttRenderSharedConfigUi();
   setGeminiMsg('✔ Đã xóa Gemini API Key khỏi thiết bị này.', 'var(--text2)');
   toast('Đã xóa khóa Gemini', 'info');
+}
+function onSettingsGeminiModelChange(modelId) {
+  const id = String(modelId || '').trim();
+  if (!id) return;
+  if (window.geminiPanicModels && typeof window.geminiPanicModels.choose === 'function' && window.geminiPanicModels.choose(id)) {
+    setGeminiMsg('✔ Đã chọn model <b>' + escHtml(id) + '</b> cho toàn app &amp; Panic Full.', 'var(--green)');
+    toast('Đã chọn model ' + id, 'success');
+    return;
+  }
+  SETTINGS.geminiModel = id;
+  SETTINGS.imeiOcrModel = id;
+  saveMetadataOnly();
+  setGeminiMsg('✔ Đã lưu model <b>' + escHtml(id) + '</b>.', 'var(--green)');
+  toast('Đã lưu model ' + id, 'success');
+}
+async function refreshGeminiModelsFromSettings() {
+  if (!ttGetGeminiClientToken()) {
+    setGeminiMsg('✘ Vui lòng nhập và lưu Gemini API Key trước khi tải danh sách model.', 'var(--red)');
+    toast('Chưa có Gemini API Key', 'error');
+    return;
+  }
+  if (window.geminiPanicModels && typeof window.geminiPanicModels.refresh === 'function') {
+    const list = await window.geminiPanicModels.refresh(true);
+    if (Array.isArray(list) && list.length) {
+      setGeminiMsg('✔ Đã tải <b>' + list.length + '</b> model Gemini khả dụng.', 'var(--green)');
+    }
+  }
 }
 
 let driveStorageInterval = null;
@@ -15047,7 +15091,7 @@ async function askGeminiForImei(b64, key, outerSignal) {
   // Never silently switch models when the selected one fails.
   // The user may opt into an explicit bounded fallback in settings.
   const config=typeof SETTINGS==='object'&&SETTINGS?SETTINGS:null;
-  const chosen=String(config?.imeiOcrModel||IMEI_OCR_MODELS[0]||'').trim();
+  const chosen=String(config?.geminiModel||config?.imeiOcrModel||IMEI_OCR_MODELS[0]||'').trim();
   if(!chosen)throw new Error('Chưa chọn model OCR');
   const models=(!config||config.ocrFallbackEnabled===true)?
     Array.from(new Set([chosen,...IMEI_OCR_MODELS])):[chosen];
@@ -15398,7 +15442,7 @@ if ('serviceWorker' in navigator) {
     });
   })();
 </script>
-<script src="./gemini-panic-models.js?v=20261124-pwa-0955"></script>
+<script src="./gemini-panic-models.js?v=20261124-pwa-1015"></script>
 </body>
 </html>
 

@@ -139,14 +139,67 @@
     badge.style.borderColor = color[2];
     badge.title = analysisMessage || discoveryMessage || label;
   }
+  function renderSettingsModelControl(current, hasKey, msg) {
+    const cfgSel = document.getElementById('cfg-gemini-model');
+    const cfgStatus = document.getElementById('cfg-gemini-model-status');
+    const cfgRefresh = document.getElementById('btn-refresh-gemini-models');
+    if (cfgSel) {
+      cfgSel.replaceChildren();
+      const blank = document.createElement('option');
+      blank.value = '';
+      blank.textContent = models.length
+        ? 'Chọn model Gemini...'
+        : (hasKey ? 'Chưa tải danh sách — bấm Tải danh sách model' : 'Nhập API Key trước để tải model');
+      cfgSel.appendChild(blank);
+      for (const model of models) {
+        const id = idOf(model.name);
+        const o = document.createElement('option');
+        o.value = id;
+        o.textContent = (model.displayName || id) + ' (' + id + ')';
+        cfgSel.appendChild(o);
+      }
+      if (selectedModelId && !current) {
+        const savedOpt = document.createElement('option');
+        savedOpt.value = selectedModelId;
+        savedOpt.textContent = selectedModelId + (models.length ? ' (không còn trong danh sách)' : ' (đã lưu)');
+        cfgSel.appendChild(savedOpt);
+      }
+      cfgSel.value = selectedModelId || '';
+      cfgSel.disabled = !hasKey && !selectedModelId;
+    }
+    if (cfgStatus) {
+      cfgStatus.textContent = selectedModelId && current
+        ? 'Đang dùng cho toàn app & Panic Full: ' + (current.displayName || selectedModelId) + ' (' + selectedModelId + ').'
+        : msg;
+      cfgStatus.style.color = discoveryState === 'error'
+        ? 'var(--red)'
+        : (selectedModelId && current ? 'var(--green)' : 'var(--text3)');
+    }
+    if (cfgRefresh) cfgRefresh.disabled = discoveryState === 'loading' || !hasKey;
+  }
   function render() {
+    if (!selectedModelId && typeof SETTINGS !== 'undefined' && SETTINGS && SETTINGS.geminiModel) {
+      selectedModelId = idOf(SETTINGS.geminiModel);
+    }
     const list = document.getElementById('gemini-menu-list');
     const status = document.getElementById('gemini-menu-status');
     const select = document.getElementById('gemini-model-select');
     const label = document.getElementById('gemini-selected-label');
     const refresh = document.getElementById('gemini-model-refresh');
-    if (!list || !status || !select || !label) return;
     const current = modelById(selectedModelId);
+    const hasKey = !!activeCredentialToken();
+    let msg = '';
+    if (!hasKey) msg = 'Chưa cấu hình API Key trong Cài đặt.';
+    else if (discoveryState === 'loading') msg = 'Đang tải danh sách model…';
+    else if (discoveryState === 'error') msg = discoveryMessage || 'Không tải được danh sách. Bấm làm mới.';
+    else if (discoveryState === 'empty') msg = 'API không trả về model generateContent phù hợp.';
+    else if (analysisState === 'partial') msg = 'Kết quả chưa đủ schema: không cấp bằng chứng tương thích để fallback.';
+    else if (selectedModelId && !current && models.length) msg = 'Model đã lưu không còn trong danh sách. Chọn lại trước khi phân tích.';
+    else if (!selectedModelId && models.length) msg = 'Chọn model để dùng cho toàn app & Panic Full.';
+    else if (models.length) msg = 'Đã tải ' + models.length + ' model (cache 10 phút).';
+    else msg = 'Đã lưu key, chưa xác minh kết nối.';
+    renderSettingsModelControl(current, hasKey, msg);
+    if (!list || !status || !select || !label) return;
     label.textContent = selectedModelId
       ? (current ? ((current.displayName || selectedModelId) + ' (' + selectedModelId + ')')
         : 'Model đã lưu: ' + selectedModelId)
@@ -189,17 +242,6 @@
       list.appendChild(row);
     }
     select.value = current ? selectedModelId : '';
-    const hasKey = !!activeCredentialToken();
-    let msg = '';
-    if (!hasKey) msg = 'Chưa cấu hình API Key trong Cài đặt.';
-    else if (discoveryState === 'loading') msg = 'Đang tải danh sách model…';
-    else if (discoveryState === 'error') msg = discoveryMessage || 'Không tải được danh sách. Bấm làm mới.';
-    else if (discoveryState === 'empty') msg = 'API không trả về model generateContent phù hợp.';
-    else if (analysisState === 'partial') msg = 'Kết quả chưa đủ schema: không cấp bằng chứng tương thích để fallback.';
-    else if (selectedModelId && !current && models.length) msg = 'Model đã lưu không còn trong danh sách. Chọn lại trước khi phân tích.';
-    else if (!selectedModelId && models.length) msg = 'Chọn model để phân tích Panic Full.';
-    else if (models.length) msg = 'Đã tải ' + models.length + ' model (cache 10 phút). Model chưa thử không được coi là tương thích ảnh/JSON.';
-    else msg = 'Đã lưu key, chưa xác minh kết nối.';
     status.textContent = msg;
     status.setAttribute('role', discoveryState === 'error' ? 'alert' : 'status');
     if (refresh) refresh.disabled = discoveryState === 'loading' || !hasKey;
@@ -212,6 +254,7 @@
     let saved = {};
     try { saved = JSON.parse(localStorage.getItem('suachua_settings') || '{}') || {}; } catch (_) {}
     saved.geminiModel = SETTINGS.geminiModel;
+    saved.imeiOcrModel = SETTINGS.geminiModel;
     saved.geminiAllowFallback = SETTINGS.geminiAllowFallback === true;
     localStorage.setItem('suachua_settings', JSON.stringify(saved));
   }
@@ -230,6 +273,7 @@
     }
     selectedModelId = id;
     SETTINGS.geminiModel = id;
+    SETTINGS.imeiOcrModel = id;
     storePreference();
     render();
     return true;
