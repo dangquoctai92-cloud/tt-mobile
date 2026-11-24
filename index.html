@@ -4373,7 +4373,7 @@ body:has(.modal-overlay.open) #notes-fab-wrap {
       </div>
 
       <!-- SECTION CARD: GEMINI AI CONFIGURATION -->
-      <div class="section-card" style="margin-top:18px">
+      <div class="section-card" id="gemini-settings-card" style="margin-top:18px">
         <div class="section-title">
           <i data-lucide="cpu" style="width:14px;height:14px;margin-right:6px;vertical-align:middle;color:#a855f7"></i>
           Cấu hình Gemini AI
@@ -4381,15 +4381,19 @@ body:has(.modal-overlay.open) #notes-fab-wrap {
         <div class="form-grid">
           <div class="field field-span2">
             <label for="cfg-gemini-key">Gemini API Key</label>
-            <input type="password" id="cfg-gemini-key" placeholder="Để trống để giữ khóa đang dùng; nhập khóa mới nếu đổi" autocomplete="new-password" style="font-family:var(--mono);font-size:12px">
+            <input type="password" id="cfg-gemini-key" placeholder="Dán Gemini API Key (để trống nếu giữ khóa hiện tại)" autocomplete="new-password" onkeydown="if(event.key==='Enter'){event.preventDefault();saveGeminiSettings();}" style="font-family:var(--mono);font-size:12px">
             <div id="cfg-gemini-status" style="margin-top:6px;font-size:12px;color:var(--text2)">Trạng thái khóa Gemini: Chưa cài đặt</div>
           </div>
         </div>
-        <div style="margin-top:14px">
-          <button class="btn btn-blue" onclick="saveSettings()">
-            <i data-lucide="save" style="width:13px;height:13px"></i> Lưu và kiểm tra
+        <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+          <button type="button" class="btn btn-blue" id="btn-save-gemini-settings" onclick="saveGeminiSettings()">
+            <i data-lucide="save" style="width:13px;height:13px"></i> Lưu và kiểm tra Gemini
+          </button>
+          <button type="button" class="btn btn-ghost" id="btn-clear-gemini-key" onclick="clearGeminiKey()" style="display:none">
+            <i data-lucide="trash-2" style="width:13px;height:13px"></i> Xóa khóa
           </button>
         </div>
+        <div id="gemini-settings-msg" style="margin-top:10px;font-size:12.5px;color:var(--text3);line-height:1.7"></div>
       </div>
 
       <div class="section-card" id="ticket-history-admin-entry" style="margin-top:18px">
@@ -5079,10 +5083,10 @@ body:has(.modal-overlay.open) #notes-fab-wrap {
   </div>
 </div>
 
-<script src="./tt-candidate-data.js?v=20261124-pwa-0830"></script>
+<script src="./tt-candidate-data.js?v=20261124-pwa-0955"></script>
 <script>
 // ══════ PWA BUILD COMPATIBILITY GATE & DRAFT RECOVERY UI ══════
-const TT_EXPECTED_BUILD_ID = '20261124-pwa-0830';
+const TT_EXPECTED_BUILD_ID = '20261124-pwa-0955';
 const TT_REQUIRED_HELPER_METHODS = [
   'isReady', 'isBlocked', 'getView', 'bootstrap', 'hydrate',
   'read', 'readCanonical', 'onHydrate', 'getRecoveryStatus',
@@ -5664,16 +5668,29 @@ function ttRenderSharedConfigUi() {
     }
   }
   if (gemStatus) {
+    const clearGemBtn = document.getElementById('btn-clear-gemini-key');
+    const hasLocalGem = !!(SETTINGS.geminiApiKey || '').trim();
     if (SETTINGS.sharedGeminiConfigured) {
       gemStatus.textContent = 'Đã cài khóa Gemini (dùng qua máy chủ) · Cập nhật: ' +
         ttFormatConfigTime(SETTINGS.sharedGeminiUpdatedAt || SETTINGS.sharedConfigUpdatedAt);
       gemStatus.style.color = 'var(--green)';
-    } else if ((SETTINGS.geminiApiKey || '').trim()) {
-      gemStatus.textContent = 'Đang dùng khóa cục bộ (chưa lưu lên máy chủ).';
-      gemStatus.style.color = 'var(--yellow)';
+      if (clearGemBtn) clearGemBtn.style.display = 'none';
+    } else if (hasLocalGem) {
+      if (sharedConfigUnavailable) {
+        gemStatus.textContent = 'Đã cài khóa Gemini trên thiết bị này' +
+          (SETTINGS.geminiVerifiedAt ? ' · Xác minh: ' + ttFormatConfigTime(SETTINGS.geminiVerifiedAt) : '') + '.';
+        gemStatus.style.color = 'var(--green)';
+      } else {
+        gemStatus.textContent = 'Đang dùng khóa cục bộ (chưa lưu lên máy chủ).';
+        gemStatus.style.color = 'var(--yellow)';
+      }
+      if (clearGemBtn) clearGemBtn.style.display = '';
     } else {
-      gemStatus.textContent = 'Chưa cài khóa Gemini trên máy chủ.';
+      gemStatus.textContent = sharedConfigUnavailable
+        ? 'Chưa cài khóa Gemini.'
+        : 'Chưa cài khóa Gemini trên máy chủ.';
       gemStatus.style.color = 'var(--text3)';
+      if (clearGemBtn) clearGemBtn.style.display = 'none';
     }
   }
   if (authBox) {
@@ -10569,6 +10586,107 @@ async function saveSettings() {
   return true;
 }
 
+function setGeminiMsg(txt, color) {
+  const el = document.getElementById('gemini-settings-msg');
+  if (!el) return;
+  el.style.color = color || 'var(--text2)';
+  el.innerHTML = txt;
+}
+async function saveGeminiSettings() {
+  if (SETTINGS.sharedConfigApiSupported === null) {
+    await ttFetchSharedConfigFromServer({ forceFormSync: false });
+  }
+  if (SETTINGS.sharedConfigApiSupported !== false) {
+    return saveSettings();
+  }
+  const geminiKeyEl = document.getElementById('cfg-gemini-key');
+  const enteredKey = geminiKeyEl ? geminiKeyEl.value.trim() : '';
+  const targetKey = enteredKey || (SETTINGS.geminiApiKey || '').trim();
+  if (!targetKey) {
+    setGeminiMsg('✘ Vui lòng nhập Gemini API Key trước khi lưu.', 'var(--red)');
+    try { geminiKeyEl?.focus?.(); } catch (_) {}
+    toast('Chưa nhập Gemini API Key', 'error');
+    return false;
+  }
+  if (targetKey.length < 10 || /\s/.test(targetKey)) {
+    setGeminiMsg('✘ Gemini API Key không hợp lệ (chứa khoảng trắng hoặc quá ngắn). Giữ nguyên khóa cũ.', 'var(--red)');
+    try { geminiKeyEl?.focus?.(); } catch (_) {}
+    toast('Gemini API Key không hợp lệ', 'error');
+    return false;
+  }
+  setGeminiMsg('⏳ Đang kiểm tra Gemini API Key với máy chủ Google Gemini…', 'var(--yellow)');
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=20', {
+      method: 'GET',
+      headers: { 'x-goog-api-key': targetKey },
+      cache: 'no-store',
+      signal: controller.signal
+    });
+    if (res.status === 400 || res.status === 401 || res.status === 403) {
+      setGeminiMsg('✘ Gemini API Key không hợp lệ hoặc bị Google từ chối (HTTP ' + res.status + '). Giữ nguyên khóa cũ.', 'var(--red)');
+      toast('Gemini API Key không hợp lệ', 'error');
+      return false;
+    }
+    if (res.status === 429) {
+      SETTINGS.geminiApiKey = targetKey;
+      SETTINGS.geminiVerifiedAt = new Date().toISOString();
+      saveMetadataOnly();
+      if (geminiKeyEl) geminiKeyEl.value = '';
+      try { window.geminiPanicModels?.invalidateKey?.(); } catch (_) {}
+      if (typeof ttRenderSharedConfigUi === 'function') ttRenderSharedConfigUi();
+      setGeminiMsg('⚠ Đã lưu Gemini API Key nhưng tài khoản đang chạm giới hạn tốc độ (HTTP 429). Vui lòng đợi ít phút rồi thử lại.', 'var(--yellow)');
+      toast('Đã lưu khóa Gemini (đang giới hạn 429)', 'warning');
+      return true;
+    }
+    if (!res.ok) {
+      setGeminiMsg('✘ Máy chủ Gemini trả lỗi (HTTP ' + res.status + '). Giữ nguyên khóa cũ.', 'var(--red)');
+      toast('Kiểm tra Gemini thất bại (HTTP ' + res.status + ')', 'error');
+      return false;
+    }
+    const data = await res.json().catch(() => null);
+    if (!data || !Array.isArray(data.models)) {
+      setGeminiMsg('✘ Phản hồi từ Google Gemini không hợp lệ. Giữ nguyên khóa cũ.', 'var(--red)');
+      toast('Phản hồi Gemini không hợp lệ', 'error');
+      return false;
+    }
+    SETTINGS.geminiApiKey = targetKey;
+    SETTINGS.geminiVerifiedAt = new Date().toISOString();
+    saveMetadataOnly();
+    if (geminiKeyEl) geminiKeyEl.value = '';
+    try {
+      window.geminiPanicModels?.invalidateKey?.();
+      void window.geminiPanicModels?.refresh?.(true);
+    } catch (_) {}
+    if (typeof ttRenderSharedConfigUi === 'function') ttRenderSharedConfigUi();
+    setGeminiMsg('✔ Đã xác minh và lưu Gemini API Key thành công (<b>' + data.models.length + '</b> model khả dụng).', 'var(--green)');
+    toast('Đã lưu & xác minh Gemini API Key', 'success');
+    return true;
+  } catch (e) {
+    const msg = e && e.name === 'AbortError'
+      ? 'Hết thời gian chờ kết nối Google Gemini.'
+      : (e?.message || 'Lỗi mạng khi kiểm tra Gemini API Key.');
+    setGeminiMsg('✘ ' + escHtml(msg) + ' Giữ nguyên khóa cũ.', 'var(--red)');
+    toast('Không kết nối được Google Gemini', 'error');
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+function clearGeminiKey() {
+  if (!SETTINGS.geminiApiKey) return;
+  SETTINGS.geminiApiKey = '';
+  SETTINGS.geminiVerifiedAt = null;
+  saveMetadataOnly();
+  const geminiKeyEl = document.getElementById('cfg-gemini-key');
+  if (geminiKeyEl) geminiKeyEl.value = '';
+  try { window.geminiPanicModels?.invalidateKey?.(); } catch (_) {}
+  if (typeof ttRenderSharedConfigUi === 'function') ttRenderSharedConfigUi();
+  setGeminiMsg('✔ Đã xóa Gemini API Key khỏi thiết bị này.', 'var(--text2)');
+  toast('Đã xóa khóa Gemini', 'info');
+}
+
 let driveStorageInterval = null;
 async function refreshDriveStorageOnce() {
   const elHead = document.getElementById('drive-storage-headline');
@@ -15280,7 +15398,7 @@ if ('serviceWorker' in navigator) {
     });
   })();
 </script>
-<script src="./gemini-panic-models.js?v=20261124-pwa-0830"></script>
+<script src="./gemini-panic-models.js?v=20261124-pwa-0955"></script>
 </body>
 </html>
 
