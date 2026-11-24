@@ -2,7 +2,7 @@
 (function(){
 'use strict';
 const LOCK='tt-mobile:db:write-v2', KEY='suachua_db', PREFIX='tt_v2img_', DRAFT='tt_v2draft_', DRAFT_IMG='tt_v2draft_image_';
-const LOCAL_SCHEMA_VERSION=3, CLIENT_PROTOCOL_VERSION=2, BUILD_ID='20261123-pwa-1840';
+const LOCAL_SCHEMA_VERSION=3, CLIENT_PROTOCOL_VERSION=2, BUILD_ID='20261124-pwa-0830';
 const slots=['before_images','after_images','condition_images','repair_images'];
 let held=false;
 const RECOVERY='tt_v2_recovery_status',BACKUP='tt_v2_good_snapshot';

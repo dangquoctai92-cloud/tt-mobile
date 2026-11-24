@@ -5079,10 +5079,10 @@ body:has(.modal-overlay.open) #notes-fab-wrap {
   </div>
 </div>
 
-<script src="./tt-candidate-data.js?v=20261123-pwa-1840"></script>
+<script src="./tt-candidate-data.js?v=20261124-pwa-0830"></script>
 <script>
 // ══════ PWA BUILD COMPATIBILITY GATE & DRAFT RECOVERY UI ══════
-const TT_EXPECTED_BUILD_ID = '20261123-pwa-1840';
+const TT_EXPECTED_BUILD_ID = '20261124-pwa-0830';
 const TT_REQUIRED_HELPER_METHODS = [
   'isReady', 'isBlocked', 'getView', 'bootstrap', 'hydrate',
   'read', 'readCanonical', 'onHydrate', 'getRecoveryStatus',
@@ -5637,16 +5637,28 @@ function ttRenderSharedConfigUi() {
   const gemStatus = document.getElementById('cfg-gemini-status');
   const authBox = document.getElementById('cfg-admin-auth-box');
   const reloadButton = document.getElementById('btn-reload-shared-config');
+  const urlInput = document.getElementById('cfg-script-url');
   const sharedConfigUnavailable = SETTINGS.sharedConfigApiSupported === false;
   if (reloadButton) reloadButton.style.display = sharedConfigUnavailable ? 'none' : '';
+  if (urlInput && !urlInput.dataset.boundStaticAuth) {
+    urlInput.dataset.boundStaticAuth = '1';
+    urlInput.addEventListener('input', () => {
+      if (SETTINGS.sharedConfigApiSupported === false) ttRenderSharedConfigUi();
+    });
+  }
   if (metaText) {
     if (SETTINGS.sharedConfigVersion > 0) {
       metaText.textContent = 'Phiên bản chung: v' + SETTINGS.sharedConfigVersion +
         ' · Cập nhật: ' + ttFormatConfigTime(SETTINGS.sharedConfigUpdatedAt) +
         (SETTINGS.sharedConfigUpdatedBy ? ' (' + SETTINGS.sharedConfigUpdatedBy + ')' : '') +
         (SETTINGS.sharedDatasetId ? ' · Dataset: ' + SETTINGS.sharedDatasetId : '');
-    } else if (SETTINGS.sharedConfigApiSupported === false) {
-      metaText.textContent = 'Cài đặt kết nối trên thiết bị này.';
+    } else if (sharedConfigUnavailable) {
+      if (typeof ttCloudMode === 'function' && ttCloudMode()) {
+        metaText.textContent = 'Đã kết nối Cloud v2 (@' + (window.TTBackendSession?.principal || 'admin') +
+          (window.TTBackendSession?.datasetId ? ' · Dataset: ' + window.TTBackendSession.datasetId : '') + ').';
+      } else {
+        metaText.textContent = 'Nhập URL Apps Script và tài khoản quản trị Cloud v2 bên dưới rồi bấm Lưu và kiểm tra.';
+      }
     } else {
       metaText.textContent = 'Chưa có cấu hình chung trên máy chủ (v0).';
     }
@@ -5666,14 +5678,28 @@ function ttRenderSharedConfigUi() {
   }
   if (authBox) {
     const titleEl = authBox.querySelector('.tt-auth-box-title');
-    if (titleEl) {
-      titleEl.textContent = SETTINGS.sharedConfigVersion > 0
-        ? 'Xác thực quản trị viên Cloud v2 (bắt buộc khi đổi cấu hình)'
-        : 'Xác thực quản trị khởi tạo (thiết lập sẵn trên máy chủ)';
+    if (sharedConfigUnavailable) {
+      if (titleEl) {
+        titleEl.textContent = 'Tài khoản quản trị Cloud v2 (bắt buộc để kết nối Google Drive & đồng bộ danh sách phiếu)';
+      }
+      const activeUrl = cleanScriptUrl(urlInput?.value || SETTINGS.scriptUrl);
+      const hasStaticCloudSess = !!(
+        typeof ttCloudMode === 'function' &&
+        ttCloudMode() &&
+        activeUrl &&
+        window.TTBackendSession?.url === activeUrl &&
+        (!window.TTBackendSession?.expiresAt || Number(window.TTBackendSession.expiresAt) > Date.now() + 5000)
+      );
+      authBox.style.display = hasStaticCloudSess ? 'none' : '';
+    } else {
+      if (titleEl) {
+        titleEl.textContent = SETTINGS.sharedConfigVersion > 0
+          ? 'Xác thực quản trị viên Cloud v2 (bắt buộc khi đổi cấu hình)'
+          : 'Xác thực quản trị khởi tạo (thiết lập sẵn trên máy chủ)';
+      }
+      const activeCfgSess = ttGetActiveConfigSaveSession();
+      authBox.style.display = (activeCfgSess && !activeCfgSess.expired && activeCfgSess.session.role === 'admin') ? 'none' : '';
     }
-    const activeCfgSess = ttGetActiveConfigSaveSession();
-    authBox.style.display = sharedConfigUnavailable ||
-      (activeCfgSess && !activeCfgSess.expired && activeCfgSess.session.role === 'admin') ? 'none' : '';
   }
 }
 function ttShouldApplySharedConfigVersion(nextVersion) {
@@ -5736,9 +5762,9 @@ function ttApplySharedConfig(cfg, opts = {}) {
   return true;
 }
 async function ttFetchSharedConfigFromServer(opts = {}) {
-  // GitHub Pages serves static files. Apps Script sync uses its own URL.
-  if (location.origin === 'https://dangquoctai92-cloud.github.io') {
+  if (typeof location !== 'undefined' && /\.github\.io$/i.test(location.hostname || '')) {
     SETTINGS.sharedConfigApiSupported = false;
+    if (typeof ttRenderSharedConfigUi === 'function') ttRenderSharedConfigUi();
     return { supported: false };
   }
   const controller = new AbortController();
@@ -5749,8 +5775,10 @@ async function ttFetchSharedConfigFromServer(opts = {}) {
       cache: 'no-store',
       signal: controller.signal
     });
-    if (res.status === 404 || res.status === 501) {
+    const ctype = String(res.headers?.get?.('content-type') || '').toLowerCase();
+    if (res.status === 404 || res.status === 405 || res.status === 501 || (res.ok && ctype && !ctype.includes('json'))) {
       SETTINGS.sharedConfigApiSupported = false;
+      if (typeof ttRenderSharedConfigUi === 'function') ttRenderSharedConfigUi();
       return { supported: false };
     }
     if (!res.ok) return { supported: true, ok: false, status: res.status };
@@ -5980,47 +6008,119 @@ function ttSameSession(ctx){
    ctx.dataset===(window.TTBackendSession?.datasetId||'')&&
    ctx.endpoint===(window.TTBackendSession?.url||'');
 }
-function ttRenderModeStatus(){
- let label=document.getElementById('tt-mode-status');
- if(!label){
-  const target=document.getElementById('drive-status-text')||document.getElementById('sidebar-username');
-  if(!target||!target.parentElement)return;
-  label=document.createElement('span');label.id='tt-mode-status';
-  label.style.cssText='display:block;font-size:11px;line-height:1.5;white-space:normal';
-  target.parentElement.appendChild(label);
+const TT_CLOUD_SESSION_KEY='tt_v2_cloud_session';
+function ttClearPersistedCloudSession(){
+ try{localStorage.removeItem(TT_CLOUD_SESSION_KEY);}catch(_){}
+}
+function ttPersistCloudSession(sess){
+ try{
+  const cleanUrl=cleanScriptUrl(sess?.url);
+  if(!sess||sess.verified!==true||typeof sess.token!=='string'||!sess.token||
+     !sess.datasetId||!cleanUrl||!['admin','manager','viewer'].includes(sess.role)||
+     !sess.principal||!(Number(sess.expiresAt)>Date.now()+5000)){
+   return false;
+  }
+  localStorage.setItem(TT_CLOUD_SESSION_KEY,JSON.stringify({
+   token:sess.token,
+   datasetId:sess.datasetId,
+   url:cleanUrl,
+   principal:sess.principal,
+   role:sess.role,
+   expiresAt:Number(sess.expiresAt)
+  }));
+  return true;
+ }catch(_){return false;}
+}
+function ttReadPersistedCloudSession(){
+ try{
+  const raw=localStorage.getItem(TT_CLOUD_SESSION_KEY);
+  if(!raw)return null;
+  const s=JSON.parse(raw);
+  const activeUrl=cleanScriptUrl(SETTINGS.scriptUrl);
+  const cleanUrl=cleanScriptUrl(s?.url);
+  if(!s||typeof s.token!=='string'||!s.token||typeof s.datasetId!=='string'||!s.datasetId||
+     !cleanUrl||!activeUrl||cleanUrl!==activeUrl||
+     !['admin','manager','viewer'].includes(s.role)||typeof s.principal!=='string'||!s.principal||
+     !(Number(s.expiresAt)>Date.now()+5000)){
+   ttClearPersistedCloudSession();
+   return null;
+  }
+  return {token:s.token,datasetId:s.datasetId,url:cleanUrl,principal:s.principal,role:s.role,expiresAt:Number(s.expiresAt)};
+ }catch(_){
+  ttClearPersistedCloudSession();
+  return null;
  }
- label.setAttribute('data-demo-mode',ttCloudMode()?'false':'true');
- label.textContent=ttCloudMode()?'Cloud v2: phiên đã xác thực; pull/staging chưa nghiệm thu.':
-   'Chế độ LOCAL/TEST — chưa xác thực Cloud, không tự đồng bộ.';
+}
+function ttApplyAuthenticatedCloudUser(cloudUser){
+ if(!cloudUser)return;
+ const localMatched=AUTH.users.find(x=>x.username===cloudUser.username);
+ const resolvedUser={
+  username:cloudUser.username,
+  displayName:cloudUser.displayName||(localMatched&&localMatched.displayName)||cloudUser.username,
+  role:cloudUser.role,
+  avatar:(localMatched&&localMatched.avatar)||cloudUser.avatar||''
+ };
+ AUTH.currentUser=resolvedUser;
+ try{localStorage.setItem(SESSION_USER_KEY,resolvedUser.username);}catch(_){}
+ const sideNameEl=document.getElementById('sidebar-username');
+ if(sideNameEl)sideNameEl.textContent=resolvedUser.displayName||resolvedUser.username;
+ const roleEl=document.querySelector('.user-role');
+ if(roleEl&&typeof ROLE_LABEL!=='undefined')roleEl.textContent=ROLE_LABEL[resolvedUser.role]||'Nhân viên';
+ if(typeof setUserSidebarAvatar==='function')setUserSidebarAvatar(resolvedUser);
+ if(typeof updateMobileHeader==='function')updateMobileHeader(resolvedUser);
+ if(typeof applyRolePermissions==='function')applyRolePermissions();
+ const adminPassEl=document.getElementById('cfg-admin-pass');
+ if(adminPassEl)adminPassEl.value='';
+}
+function ttFormatCloudLoginError(err){
+ const code=String(err?.errorCode||err?.message||'');
+ if(code==='AUTH_RATE_LIMIT')return 'Nhập sai quá nhiều lần; vui lòng đợi ít phút rồi thử lại.';
+ if(code==='AUTH_FAILED'||code==='CLOUD_LOGIN_FAILED')return 'Sai tài khoản hoặc mật khẩu Cloud v2.';
+ return err?.message||'Không xác thực được tài khoản Cloud v2.';
+}
+function ttRenderModeStatus(){
+ document.getElementById('tt-mode-status')?.remove();
  if (typeof ttRenderSharedConfigUi === 'function') ttRenderSharedConfigUi();
  try { window.geminiPanicModels?.getCredentialEpoch?.(); } catch (_) {}
 }
 function ttInvalidateSession(reason){
+ ttClearPersistedCloudSession();
  ttSessionEpoch++;ttNotesCredentialEpoch++;
  window.TTBackendSession=null;
  if(typeof ttNotesBaseline!=='undefined'){ttNotesBaseline=[];ttNotesBaselineKey='';}
  ttRenderModeStatus();
 }
-async function ttLoginCloud(username,password){
- const cap=await ttRequireBackend();
- const res=await fetch(cap.url,{method:'POST',
-  headers:{'Content-Type':'text/plain;charset=utf-8'},
-  body:JSON.stringify({action:'login',appId:TT_APP_ID,protocolVersion:2,
-   datasetId:cap.datasetId,username,password})});
- if(!res.ok)throw Error('CLOUD_LOGIN_HTTP_'+res.status);
- const body=await res.json();
- if(body?.ok!==true||body.action!=='login'||body.appId!==TT_APP_ID||
-    body.protocolVersion!==2||body.datasetId!==cap.datasetId||
-    typeof body.sessionToken!=='string'||!body.sessionToken||
-    !['admin','manager','viewer'].includes(body.actor?.role)||
-    body.actor?.username!==username||Number(body.expiresAt)<=Date.now())
-   throw Error('CLOUD_LOGIN_FAILED');
- ttInvalidateSession('new_login');
- window.TTBackendSession={token:body.sessionToken,datasetId:cap.datasetId,
-  url:cap.url,verified:true,principal:body.actor.username,role:body.actor.role,
-  expiresAt:body.expiresAt};
- ttRenderModeStatus();
- return {username:body.actor.username,displayName:body.actor.username,role:body.actor.role};
+async function ttLoginCloud(username,password,candidateUrl){
+ const prevBackendV2=ttBackendV2;
+ let cap;
+ try{
+  cap=await ttRequireBackend(candidateUrl);
+  const res=await fetch(cap.url,{method:'POST',
+   headers:{'Content-Type':'text/plain;charset=utf-8'},
+   body:JSON.stringify({action:'login',appId:TT_APP_ID,protocolVersion:2,
+    datasetId:cap.datasetId,username,password})});
+  if(!res.ok)throw Object.assign(Error('CLOUD_LOGIN_HTTP_'+res.status),{errorCode:'CLOUD_LOGIN_HTTP_'+res.status});
+  const body=await res.json().catch(()=>null);
+  if(body?.ok!==true||body.action!=='login'||body.appId!==TT_APP_ID||
+     body.protocolVersion!==2||body.datasetId!==cap.datasetId||
+     typeof body.sessionToken!=='string'||!body.sessionToken||
+     !['admin','manager','viewer'].includes(body.actor?.role)||
+     body.actor?.username!==username||Number(body.expiresAt)<=Date.now()){
+   const code=String(body?.errorCode||'CLOUD_LOGIN_FAILED');
+   throw Object.assign(Error(code),{errorCode:code});
+  }
+  ttInvalidateSession('new_login');
+  ttBackendV2={url:cap.url,datasetId:cap.datasetId};
+  window.TTBackendSession={token:body.sessionToken,datasetId:cap.datasetId,
+   url:cap.url,verified:true,principal:body.actor.username,role:body.actor.role,
+   expiresAt:body.expiresAt};
+  ttPersistCloudSession(window.TTBackendSession);
+  ttRenderModeStatus();
+  return {username:body.actor.username,displayName:body.actor.username,role:body.actor.role};
+ }catch(err){
+  ttBackendV2=prevBackendV2;
+  throw err;
+ }
 }
 async function ttRevokeSessionOnline(session){
  if(!session?.token)return false;
@@ -6058,6 +6158,10 @@ async function ttBackendRead(action,extra={}){
   if(!response.ok)throw Error('BACKEND_READ_HTTP_'+response.status);
   const data=await response.json();
   if(!ttSameSession(ctx))throw Error('SESSION_CHANGED');
+  if(data&&data.ok===false&&['AUTH_REQUIRED','AUTH_REVOKED'].includes(String(data.errorCode||''))){
+   ttInvalidateSession('remote_'+String(data.errorCode).toLowerCase());
+   if(typeof updateDriveStatus==='function')updateDriveStatus(false);
+  }
   if(!data||data.ok!==true||data.action!==action||data.appId!==TT_APP_ID||
      data.protocolVersion!==2||data.datasetId!==cap.datasetId||
      !Array.isArray(data.rows)||!Number.isSafeInteger(Number(data.snapshotRevision)))
@@ -6130,6 +6234,10 @@ async function ttPostAck(payload,ticket,operation,revision,opts={}) {
     const sameSess=ttSameSession(sessionIdentity);
     const sameEndpoint=cleanScriptUrl(SETTINGS.scriptUrl)===context.url&&!!ttBackendV2&&ttBackendV2.url===context.url&&ttBackendV2.datasetId===context.datasetId;
     const accepted=sameSess&&sameEndpoint&&ttAcceptAck(data,payload.action,ticket,operation,revision,context);
+    if(sameSess&&data&&data.ok===false&&['AUTH_REQUIRED','AUTH_REVOKED'].includes(String(data.errorCode||''))){
+      ttInvalidateSession('remote_'+String(data.errorCode).toLowerCase());
+      if(typeof updateDriveStatus==='function')updateDriveStatus(false);
+    }
     ttRecordAckStep('ttAcceptAck:result',{action:payload?.action,ticketId:String(ticket),operationId:String(operation),revision:Number(revision),attempt,durationMs:Date.now()-t0,status:response.status,sameSess,sameEndpoint,accepted,operationComplete:data?.ack?.operationComplete===true,acceptedRevision:data?.ack?.acceptedRevision??null,mismatches,serverTiming:data?.timing||null});
     if(!accepted)
       throw new Error('ACK không khớp phiên endpoint/dataset/action/ticket/operation/revision; giữ pending.');
@@ -6804,6 +6912,7 @@ async function backgroundSyncLoop() {
     try{await ttRequireBackend();}catch(e){
       updateDriveStatus(false);return {status:'failed',pushed:0,deleted:0,reason:'Backend v2 chưa sẵn sàng'};
     }
+    if(typeof updateDriveStatus==='function')updateDriveStatus(ttCloudMode());
     _bgSyncActive=true;
     ttRefreshSyncLocks();
     try{
@@ -6928,6 +7037,63 @@ khoiDongApp(async function checkAutoLogin() {
   try {
     await ttFetchSharedConfigFromServer({ forceFormSync: true });
     if (window.TTBackendSession?.verified || AUTH.currentUser) return;
+    const restoredCloud = ttReadPersistedCloudSession();
+    if (restoredCloud) {
+      ttBackendV2 = { url: restoredCloud.url, datasetId: restoredCloud.datasetId };
+      window.TTBackendSession = {
+        token: restoredCloud.token,
+        datasetId: restoredCloud.datasetId,
+        url: restoredCloud.url,
+        verified: true,
+        principal: restoredCloud.principal,
+        role: restoredCloud.role,
+        expiresAt: restoredCloud.expiresAt
+      };
+      const localMatched = AUTH.users.find(x => x.username === restoredCloud.principal);
+      const cloudUser = {
+        username: restoredCloud.principal,
+        displayName: (localMatched && localMatched.displayName) || restoredCloud.principal,
+        role: restoredCloud.role,
+        avatar: (localMatched && localMatched.avatar) || ''
+      };
+      localStorage.setItem(SESSION_USER_KEY, cloudUser.username);
+      AUTH.currentUser = cloudUser;
+      showAppScreen(cloudUser);
+      ttRenderModeStatus();
+      try { await initApp(); } catch(e) { console.warn('[initApp]', e); }
+      if (typeof navigator === 'undefined' || navigator.onLine !== false) {
+        const bootCtx = ttSessionIdentity();
+        fetch(restoredCloud.url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            action: 'whoami',
+            appId: TT_APP_ID,
+            protocolVersion: 2,
+            datasetId: restoredCloud.datasetId,
+            sessionToken: restoredCloud.token
+          })
+        }).then(r => r.ok ? r.json().catch(() => null) : null).then(body => {
+          if (!body || !ttSameSession(bootCtx)) return;
+          if (body.ok === false && ['AUTH_REQUIRED', 'AUTH_REVOKED'].includes(String(body.errorCode || ''))) {
+            ttInvalidateSession('boot_whoami_rejected');
+            if (typeof updateDriveStatus === 'function') updateDriveStatus(false);
+          } else if (body.ok === true && body.actor && ['admin', 'manager', 'viewer'].includes(body.actor.role)) {
+            if (window.TTBackendSession && window.TTBackendSession.role !== body.actor.role) {
+              window.TTBackendSession.role = body.actor.role;
+              ttPersistCloudSession(window.TTBackendSession);
+              if (AUTH.currentUser) {
+                AUTH.currentUser.role = body.actor.role;
+                const roleEl = document.querySelector('.user-role');
+                if (roleEl && typeof ROLE_LABEL !== 'undefined') roleEl.textContent = ROLE_LABEL[body.actor.role] || 'Nhân viên';
+                if (typeof applyRolePermissions === 'function') applyRolePermissions();
+              }
+            }
+          }
+        }).catch(() => {});
+      }
+      return;
+    }
     if (SKIP_LOGIN_SCREEN) {
       const adminUser = AUTH.users.find(u => u.username === 'admin')
         || { username: 'admin', password: 'admin123', displayName: 'Admin', role: 'admin' };
@@ -10298,6 +10464,7 @@ async function saveSettings() {
         role: data.authSession.actor.role,
         expiresAt: data.authSession.expiresAt || (Date.now() + 6 * 3600 * 1000)
       };
+      ttPersistCloudSession(window.TTBackendSession);
       AUTH.currentUser = {
         username: data.authSession.actor.username,
         displayName: data.authSession.actor.username,
@@ -10324,25 +10491,81 @@ async function saveSettings() {
     return true;
   }
 
-  // Fallback for static-only hosts without /api/shared-config
-  if (enteredGeminiKey) SETTINGS.geminiApiKey = enteredGeminiKey;
-  if (!url) {
+  // Fallback for static-only hosts without /api/shared-config (e.g. GitHub Pages)
+  let geminiSaved = false;
+  if (enteredGeminiKey) {
+    SETTINGS.geminiApiKey = enteredGeminiKey;
+    if (geminiKeyEl) geminiKeyEl.value = '';
+    try { window.geminiPanicModels?.invalidateKey?.(); } catch (_) {}
+    geminiSaved = true;
+  }
+  const targetUrl = url || cleanScriptUrl(SETTINGS.scriptUrl);
+  if (!targetUrl) {
     saveMetadataOnly();
+    if (typeof ttRenderSharedConfigUi === 'function') ttRenderSharedConfigUi();
     setMsg('✔ Đã lưu cài đặt cục bộ.', 'var(--green)');
     toast('Đã lưu cài đặt', 'success');
     return true;
   }
-  setMsg('⏳ Đang kiểm tra kết nối URL…', 'var(--yellow)');
-  const alive = await probeScriptUrl(url, 10000);
-  if (!alive) {
-    setMsg('✘ Lỗi mục [URL Apps Script]: Chưa kết nối được URL mới; giữ bản đang hoạt động.', 'var(--red)');
-    toast('Chưa kết nối được URL mới', 'error');
+  setMsg('⏳ Đang kiểm tra kết nối URL Apps Script v2…', 'var(--yellow)');
+  const prevBackendV2 = ttBackendV2;
+  let cap;
+  try {
+    cap = await ttRequireBackend(targetUrl);
+  } catch (e) {
+    ttBackendV2 = prevBackendV2;
+    if (geminiSaved) saveMetadataOnly();
+    setMsg('✘ Lỗi mục [URL Apps Script]: ' + escHtml(e.message || 'Chưa kết nối được URL mới') + ' — giữ bản đang hoạt động.', 'var(--red)');
+    toast('Chưa kết nối được URL Apps Script', 'error');
     return false;
   }
-  adoptScriptUrl(url, { manual: true });
+  const hasMatchingSess = !!(
+    window.TTBackendSession &&
+    window.TTBackendSession.verified === true &&
+    typeof window.TTBackendSession.token === 'string' &&
+    window.TTBackendSession.token &&
+    window.TTBackendSession.url === cap.url &&
+    window.TTBackendSession.datasetId === cap.datasetId &&
+    (!window.TTBackendSession.expiresAt || Number(window.TTBackendSession.expiresAt) > Date.now() + 5000)
+  );
+  if (!hasMatchingSess || adminPass) {
+    if (!adminUser || !adminPass) {
+      if (geminiSaved) saveMetadataOnly();
+      ttBackendV2 = prevBackendV2;
+      const authBox = document.getElementById('cfg-admin-auth-box');
+      if (authBox) authBox.style.display = '';
+      const focusEl = !adminUser ? document.getElementById('cfg-admin-user') : document.getElementById('cfg-admin-pass');
+      try { focusEl?.focus?.(); } catch (_) {}
+      setMsg('⚠ URL Apps Script hợp lệ (Dataset: <b>' + escHtml(cap.datasetId) + '</b>). Vui lòng nhập <b>Tài khoản quản trị</b> và <b>Mật khẩu quản trị Cloud v2</b> ở khung phía trên rồi bấm lại <b>Lưu và kiểm tra</b> để kết nối Google Drive và tải đủ danh sách phiếu.', 'var(--yellow)');
+      toast('Nhập tài khoản & mật khẩu Cloud v2 để kết nối', 'warning');
+      return false;
+    }
+    setMsg('⏳ Đang xác thực tài khoản Cloud v2 & kết nối Google Drive…', 'var(--yellow)');
+    let cloudUser;
+    try {
+      cloudUser = await ttLoginCloud(adminUser, adminPass, cap.url);
+    } catch (e) {
+      ttBackendV2 = prevBackendV2;
+      if (geminiSaved) saveMetadataOnly();
+      setMsg('✘ Lỗi mục [Xác thực quản trị]: ' + escHtml(ttFormatCloudLoginError(e)) + ' — giữ bản đang hoạt động.', 'var(--red)');
+      toast('Xác thực Cloud v2 thất bại', 'error');
+      return false;
+    }
+    adoptScriptUrl(cap.url, { manual: true });
+    ttBackendV2 = { url: cap.url, datasetId: cap.datasetId };
+    ttPersistCloudSession(window.TTBackendSession);
+    ttApplyAuthenticatedCloudUser(cloudUser);
+  } else {
+    adoptScriptUrl(cap.url, { manual: true });
+    if (geminiSaved) saveMetadataOnly();
+  }
   updateDriveStatus(true);
-  setMsg('✔ Kết nối thành công và đã lưu cục bộ.', 'var(--green)');
-  toast('Đã lưu & kết nối thành công', 'success');
+  if (typeof ttRenderModeStatus === 'function') ttRenderModeStatus();
+  setMsg('⏳ Đã xác thực Cloud v2 — đang tải danh sách phiếu & dung lượng Google Drive…', 'var(--yellow)');
+  await Promise.allSettled([refreshDriveStorageOnce(), backgroundSyncLoop()]);
+  const syncedCount = DB.tickets.filter(t => !t.__demo && t.status !== '__DELETED__').length;
+  setMsg('✔ Đã kết nối Google Drive & đồng bộ thành công (<b>' + syncedCount + '</b> phiếu · Dataset: <b>' + escHtml(cap.datasetId) + '</b>).', 'var(--green)');
+  toast('Đã kết nối Cloud & tải ' + syncedCount + ' phiếu', 'success');
   return true;
 }
 
@@ -10433,6 +10656,16 @@ async function refreshDriveStorageOnce() {
     if (!resp.ok) throw new Error('HTTP_' + resp.status);
     const json = await resp.json();
     if (!ttSameSession(ctx)) return;
+    if (json && json.ok === false && ['AUTH_REQUIRED', 'AUTH_REVOKED'].includes(String(json.errorCode || ''))) {
+      if (typeof ttInvalidateSession === 'function') ttInvalidateSession('remote_' + String(json.errorCode).toLowerCase());
+      if (typeof updateDriveStatus === 'function') updateDriveStatus(false);
+      resetUi('Phiên đăng nhập Cloud v2 đã hết hạn hoặc bị thu hồi. Hãy nhập lại tài khoản quản trị và bấm <strong>Lưu và kiểm tra</strong>.', '');
+      elCount.textContent = '—';
+      elFolderSz.textContent = '—';
+      elTs.textContent = '—';
+      if (elEmail) elEmail.textContent = '—';
+      return;
+    }
     if (!json || json.ok !== true || json.action !== 'drive_storage' || json.appId !== TT_APP_ID || json.datasetId !== cap.datasetId) {
       throw new Error((json && json.errorCode) || 'bad_response');
     }
@@ -10855,23 +11088,61 @@ async function testDrive() {
     setMsg('✘ URL không hợp lệ! Phải là URL từ Google Apps Script (script.google.com/macros/s/.../exec)', 'var(--red)');
     return;
   }
-  const oldUrl = cleanScriptUrl(SETTINGS.scriptUrl);
+  const adminUser = document.getElementById('cfg-admin-user')?.value.trim() || '';
+  const adminPass = document.getElementById('cfg-admin-pass')?.value || '';
   setMsg('⏳ Đang kết nối tới Google Sheets...', 'var(--yellow)');
 
-  // Kiểm tra bằng action=getUsers — doGet xử lý được. (action=ping chỉ tồn tại trong
-  // doPost, nên cách kiểm tra cũ báo lỗi cả khi URL vẫn hoàn toàn bình thường.)
-  if (await probeScriptUrl(url, 10000)) {
-    setPinnedUrl(url);
-    adoptScriptUrl(url, { manual: true });
-    updateDriveStatus(true);
-    const okNew = false; // Must not push user/password records via an unverified users endpoint.
-    const spread = 0;
-    setMsg('Endpoint v2 đã phản hồi capabilities. '+(
-      window.TTBackendSession?.datasetId===ttBackendV2?.datasetId?
-        'Đã có phiên cloud; chưa xác minh upload/Drive hoặc pull.' :
-        'Chưa xác thực cloud. Dữ liệu vẫn chỉ ở máy và pending được giữ.')+
-      '<br>Snapshot pull và staging vẫn đang BLOCKED.','var(--yellow)');
-    toast('Đã kiểm tra giao thức endpoint; chưa chứng minh đồng bộ.', 'warning');
+  const prevBackendV2 = ttBackendV2;
+  let cap = null;
+  try {
+    cap = await ttRequireBackend(url);
+  } catch (e) {
+    ttBackendV2 = prevBackendV2;
+    console.warn('[probe backend v2]', e.message);
+  }
+  if (cap) {
+    const hasMatchingSess = !!(
+      window.TTBackendSession &&
+      window.TTBackendSession.verified === true &&
+      window.TTBackendSession.token &&
+      window.TTBackendSession.url === cap.url &&
+      window.TTBackendSession.datasetId === cap.datasetId &&
+      (!window.TTBackendSession.expiresAt || Number(window.TTBackendSession.expiresAt) > Date.now() + 5000)
+    );
+    if ((!hasMatchingSess || adminPass) && adminUser && adminPass) {
+      try {
+        const cloudUser = await ttLoginCloud(adminUser, adminPass, cap.url);
+        ttApplyAuthenticatedCloudUser(cloudUser);
+      } catch (e) {
+        ttBackendV2 = prevBackendV2;
+        updateDriveStatus(ttCloudMode());
+        setMsg('✘ Lỗi mục [Xác thực quản trị]: ' + escHtml(ttFormatCloudLoginError(e)), 'var(--red)');
+        toast('Xác thực Cloud v2 thất bại', 'error');
+        return;
+      }
+    }
+    const nowCloud = !!(
+      ttCloudMode() &&
+      window.TTBackendSession?.url === cap.url &&
+      window.TTBackendSession?.datasetId === cap.datasetId
+    );
+    if (nowCloud) {
+      setPinnedUrl(cap.url);
+      adoptScriptUrl(cap.url, { manual: true });
+      updateDriveStatus(true);
+      if (typeof ttRenderModeStatus === 'function') ttRenderModeStatus();
+      await Promise.allSettled([refreshDriveStorageOnce(), backgroundSyncLoop()]);
+      const syncedCount = DB.tickets.filter(t => !t.__demo && t.status !== '__DELETED__').length;
+      setMsg('✔ Đã kết nối Google Drive & đồng bộ thành công (<b>' + syncedCount + '</b> phiếu · Dataset: <b>' + escHtml(cap.datasetId) + '</b>).', 'var(--green)');
+      toast('Đã kết nối Cloud & đồng bộ xong', 'success');
+      return;
+    }
+    ttBackendV2 = prevBackendV2;
+    updateDriveStatus(false);
+    const authBox = document.getElementById('cfg-admin-auth-box');
+    if (authBox) authBox.style.display = '';
+    setMsg('Endpoint v2 đã phản hồi (Dataset: <b>' + escHtml(cap.datasetId) + '</b>), nhưng chưa xác thực tài khoản Cloud v2.<br>Hãy nhập <b>Tài khoản quản trị</b> và <b>Mật khẩu quản trị</b> ở khung phía trên rồi bấm <b>Lưu và kiểm tra</b> để kết nối Google Drive và tải danh sách phiếu.', 'var(--yellow)');
+    toast('Cần nhập tài khoản Cloud v2 để kết nối Drive', 'warning');
     return;
   }
 
@@ -10880,8 +11151,8 @@ async function testDrive() {
   const alt = await resolveWorkingScriptUrl();
   if (alt && alt !== url) {
     document.getElementById('cfg-script-url').value = alt;
-    updateDriveStatus(true);
-    setMsg(`⚠ URL vừa nhập không phản hồi, nhưng tìm được một kết nối khác còn sống và đã chuyển sang:<br><code style="font-size:11px">${alt}</code><br>Nhấn <b>Lưu cài đặt</b> nếu muốn dùng luôn URL này.`, 'var(--yellow)');
+    updateDriveStatus(ttCloudMode());
+    setMsg(`⚠ URL vừa nhập không phản hồi, nhưng tìm được một kết nối khác còn sống và đã chuyển sang:<br><code style="font-size:11px">${alt}</code><br>Nhấn <b>Lưu và kiểm tra</b> để xác thực và kết nối URL này.`, 'var(--yellow)');
     toast('Đã tự chuyển sang kết nối còn sống', 'success');
     return;
   }
@@ -10930,9 +11201,18 @@ function updateDriveStatus(isOk) {
 }
 let isSyncingDrive = false;
 async function syncDrive() {
-  if (!SETTINGS.driveConnected) {
-    showPage('settings');
-    toast('Vào Cài đặt để nhập Apps Script URL', 'info');
+  if (!SETTINGS.driveConnected || !cleanScriptUrl(SETTINGS.scriptUrl) || !ttCloudMode()) {
+    const role = AUTH.currentUser?.role || 'viewer';
+    if (role === 'admin') {
+      showPage('settings');
+      const authBox = document.getElementById('cfg-admin-auth-box');
+      if (authBox && !ttCloudMode()) authBox.style.display = '';
+      toast(cleanScriptUrl(SETTINGS.scriptUrl) && !ttCloudMode()
+        ? 'Vào Cài đặt nhập tài khoản Cloud v2 rồi bấm Lưu và kiểm tra để đồng bộ'
+        : 'Vào Cài đặt để nhập Apps Script URL & tài khoản Cloud v2', 'info');
+    } else {
+      toast('Chưa xác thực phiên Cloud v2 — hãy đăng nhập lại bằng tài khoản được cấp quyền.', 'warning');
+    }
     return;
   }
   if (isSyncingDrive) {
@@ -11168,7 +11448,7 @@ async function initApp() {
   initFabVisibility();
   initFabDraggability();
   renderTable(DB.tickets);
-  updateDriveStatus(false); // Kết nối chỉ được xác nhận sau probe + ACK v2.
+  updateDriveStatus(ttCloudMode() && !!cleanScriptUrl(SETTINGS.scriptUrl));
   // Cap nhat role hien thi sidebar
   const user = AUTH.currentUser;
   if (user) {
@@ -15000,6 +15280,7 @@ if ('serviceWorker' in navigator) {
     });
   })();
 </script>
-<script src="./gemini-panic-models.js?v=20261123-pwa-1840"></script>
+<script src="./gemini-panic-models.js?v=20261124-pwa-0830"></script>
 </body>
 </html>
+
