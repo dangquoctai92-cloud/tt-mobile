@@ -4838,10 +4838,10 @@ body:has(.modal-overlay.open) #notes-fab-wrap {
   </div>
 </div>
 
-<script src="./tt-candidate-data.js?v=20261124-pwa-2040"></script>
+<script src="./tt-candidate-data.js?v=20261125-pwa-1525"></script>
 <script>
 // ══════ PWA BUILD COMPATIBILITY GATE & DRAFT RECOVERY UI ══════
-const TT_EXPECTED_BUILD_ID = '20261124-pwa-2040';
+const TT_EXPECTED_BUILD_ID = '20261125-pwa-1525';
 const TT_REQUIRED_HELPER_METHODS = [
   'isReady', 'isBlocked', 'getView', 'bootstrap', 'hydrate',
   'read', 'readCanonical', 'onHydrate', 'getRecoveryStatus',
@@ -5887,6 +5887,10 @@ async function ttLoginCloud(username,password,candidateUrl){
    url:cap.url,verified:true,principal:body.actor.username,role:body.actor.role,
    expiresAt:body.expiresAt};
   ttPersistCloudSession(window.TTBackendSession);
+  if (typeof SETTINGS === 'object' && SETTINGS) {
+    SETTINGS.lastCloudUsername = body.actor.username;
+    try { if (typeof saveMetadataOnly === 'function') saveMetadataOnly(); } catch (_) {}
+  }
   ttRenderModeStatus();
   return {username:body.actor.username,displayName:body.actor.username,role:body.actor.role};
  }catch(err){
@@ -6643,7 +6647,7 @@ function ttRefreshSyncLocks() {
   _syncLocked = (_activeSaveSyncLocks > 0) || _bgSyncActive;
 }
 function ttScheduleOutboxSync() {
-  if (!SETTINGS.driveConnected || !SETTINGS.scriptUrl) return Promise.resolve({ status: 'offline', pushed: 0, deleted: 0 });
+  if (!cleanScriptUrl(SETTINGS.scriptUrl) || !ttCloudMode()) return Promise.resolve({ status: 'offline', pushed: 0, deleted: 0 });
   ttBgSyncNeedsAnotherPass = true;
   if (_backgroundSyncPromise) return _backgroundSyncPromise;
   return backgroundSyncLoop();
@@ -6678,12 +6682,17 @@ let _backgroundSyncPromise = null;
 async function backgroundSyncLoop() {
   if(_backgroundSyncPromise){ttBgSyncNeedsAnotherPass=true;return _backgroundSyncPromise;}
   if(_savingTicket){ttBgSyncNeedsAnotherPass=true;return {status:'busy',pushed:0,deleted:0};}
-  if(!SETTINGS.scriptUrl)return {status:'offline',pushed:0,deleted:0};
+  if(!cleanScriptUrl(SETTINGS.scriptUrl))return {status:'offline',pushed:0,deleted:0};
+  if(!ttCloudMode()){
+    if(typeof updateDriveStatus==='function')updateDriveStatus(false);
+    return {status:'auth_required',pushed:0,deleted:0,reason:'Chưa xác thực phiên Cloud v2'};
+  }
   _backgroundSyncPromise=(async()=>{
     lastSyncTime=Date.now();let pushed=0,deleted=0,failed=0;
     try{await ttRequireBackend();}catch(e){
       updateDriveStatus(false);return {status:'failed',pushed:0,deleted:0,reason:'Backend v2 chưa sẵn sàng'};
     }
+    if(ttCloudMode()){SETTINGS.driveConnected=true;}
     if(typeof updateDriveStatus==='function')updateDriveStatus(ttCloudMode());
     _bgSyncActive=true;
     ttRefreshSyncLocks();
@@ -6731,39 +6740,42 @@ async function backgroundSyncLoop() {
   })();
   try{return await _backgroundSyncPromise;}finally{
     _backgroundSyncPromise=null;
-    if(ttBgSyncNeedsAnotherPass && !_savingTicket && SETTINGS.driveConnected && SETTINGS.scriptUrl){
+    if(ttBgSyncNeedsAnotherPass && !_savingTicket && ttCloudMode() && cleanScriptUrl(SETTINGS.scriptUrl)){
       setTimeout(()=>void ttScheduleOutboxSync(),0);
     }
   }
 }
 function startSyncTimer() {
   if (syncTimer) clearInterval(syncTimer);
-  // Đồng bộ thông minh: kiểm tra mỗi 2 giây
+  // Đồng bộ nhanh giữa các thiết bị: 3s khi đang thao tác, 6s khi tab đang mở trên màn hình
   syncTimer = setInterval(() => {
     if (document.visibilityState !== 'visible') return;
-    
+    if (!ttCloudMode()) return;
+
     const now = Date.now();
     const timeSinceLastActivity = now - lastUserActivity;
-    
-    // Đang hoạt động (trong 30s qua): đồng bộ mỗi 5 giây. Treo máy (idle): đồng bộ mỗi 20 giây.
+
     const isUserActive = timeSinceLastActivity < 30000;
-    const currentInterval = isUserActive ? 5000 : 20000;
-    
+    const currentInterval = isUserActive ? 3000 : 6000;
+
     if (now - lastSyncTime >= currentInterval) {
       backgroundSyncLoop();
     }
-  }, 2000);
+  }, 1500);
 }
 
-// Đồng bộ lập tức khi người dùng quay lại tab (App) hoặc có kết nối mạng trở lại
+// Đồng bộ lập tức khi người dùng quay lại tab / cửa sổ hoặc có kết nối mạng trở lại
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') {
+  if (document.visibilityState === 'visible' && ttCloudMode()) {
     backgroundSyncLoop();
   }
 });
+window.addEventListener('focus', () => {
+  if (ttCloudMode()) backgroundSyncLoop();
+});
 window.addEventListener('online', async () => {
   await ttFetchSharedConfigFromServer();
-  backgroundSyncLoop();
+  if (ttCloudMode()) backgroundSyncLoop();
 });
 
 function showLoginScreen() {
@@ -6850,16 +6862,25 @@ khoiDongApp(async function checkAutoLogin() {
           if (body.ok === false && ['AUTH_REQUIRED', 'AUTH_REVOKED'].includes(String(body.errorCode || ''))) {
             ttInvalidateSession('boot_whoami_rejected');
             if (typeof updateDriveStatus === 'function') updateDriveStatus(false);
+            if (typeof toast === 'function') toast('Phiên Cloud đã hết hạn — vào Cài đặt bấm Lưu và kiểm tra để tiếp tục đồng bộ.', 'warning');
           } else if (body.ok === true && body.actor && ['admin', 'manager', 'viewer'].includes(body.actor.role)) {
+            let needPersist = false;
+            if (window.TTBackendSession && Number(body.expiresAt) > Number(window.TTBackendSession.expiresAt || 0)) {
+              window.TTBackendSession.expiresAt = Number(body.expiresAt);
+              needPersist = true;
+            }
             if (window.TTBackendSession && window.TTBackendSession.role !== body.actor.role) {
               window.TTBackendSession.role = body.actor.role;
-              ttPersistCloudSession(window.TTBackendSession);
+              needPersist = true;
               if (AUTH.currentUser) {
                 AUTH.currentUser.role = body.actor.role;
                 const roleEl = document.querySelector('.user-role');
                 if (roleEl && typeof ROLE_LABEL !== 'undefined') roleEl.textContent = ROLE_LABEL[body.actor.role] || 'Nhân viên';
                 if (typeof applyRolePermissions === 'function') applyRolePermissions();
               }
+            }
+            if (needPersist && window.TTBackendSession) {
+              ttPersistCloudSession(window.TTBackendSession);
             }
           }
         }).catch(() => {});
@@ -6875,6 +6896,10 @@ khoiDongApp(async function checkAutoLogin() {
       ttRenderModeStatus();
       // Lỗi trong initApp (mạng chậm, sheet chưa phản hồi…) không được đá ngược về màn đăng nhập
       try { await initApp(); } catch(e) { console.warn('[initApp]', e); }
+      if (cleanScriptUrl(SETTINGS.scriptUrl) && !ttCloudMode()) {
+        if (typeof updateDriveStatus === 'function') updateDriveStatus(false);
+        if (typeof toast === 'function') toast('Phiên Cloud chưa đăng nhập hoặc đã hết hạn — vào Cài đặt bấm Lưu và kiểm tra để đồng bộ các thiết bị.', 'warning');
+      }
       return;
     }
     const saved = localStorage.getItem('suachua_remember'); // chỉ để điền mật khẩu
@@ -9465,8 +9490,13 @@ async function saveTicket() {
   });
   // Trả giao diện, nhả nút Lưu và lớp phủ ngay sau khi commit cục bộ; gửi outbox ngay sau đó qua luồng nền FIFO.
   releaseLocalSaveLock(true);
-  if (SETTINGS.driveConnected && SETTINGS.scriptUrl) {
-    void ttScheduleOutboxSync();
+  if (cleanScriptUrl(SETTINGS.scriptUrl)) {
+    if (ttCloudMode()) {
+      void ttScheduleOutboxSync();
+    } else {
+      if (typeof updateDriveStatus === 'function') updateDriveStatus(false);
+      toast('Phiếu đã lưu tạm trên máy này nhưng CHƯA đồng bộ lên Cloud (phiên đăng nhập hết hạn). Vào Cài đặt → bấm Lưu và kiểm tra!', 'warning');
+    }
   }
   return true;
   } catch(e) {
@@ -9503,7 +9533,12 @@ async function deleteSelected() {
   }
   selectedIds.clear();selectedTicketId=null;
   renderTable(DB.tickets);
-  toast('Đã ghi tombstone bền vững; chờ ACK từ backend.','warning');
+  if (cleanScriptUrl(SETTINGS.scriptUrl) && ttCloudMode()) {
+    toast('Đang đồng bộ xóa phiếu lên Cloud…', 'info');
+    void ttScheduleOutboxSync();
+  } else {
+    toast('Đã ghi nhận xóa cục bộ; đăng nhập Cloud ở Cài đặt để đồng bộ sang thiết bị khác.', 'warning');
+  }
   return true;
 }
 async function deleteCurrentTicket() {
@@ -9513,7 +9548,12 @@ async function deleteCurrentTicket() {
   try{await TTCandidateData.commitDelete([editingTicketId],ttDatasetBinding());}
   catch(e){toast('Chặn xóa: '+e.message,'error');return false;}
   closeForm();renderTable(DB.tickets);
-  toast('Đã ghi tombstone; chờ backend xác nhận xóa.','warning');
+  if (cleanScriptUrl(SETTINGS.scriptUrl) && ttCloudMode()) {
+    toast('Đang đồng bộ xóa phiếu lên Cloud…', 'info');
+    void ttScheduleOutboxSync();
+  } else {
+    toast('Đã ghi nhận xóa cục bộ; đăng nhập Cloud ở Cài đặt để đồng bộ sang thiết bị khác.', 'warning');
+  }
   return true;
 }
 
@@ -10056,6 +10096,10 @@ function renderStats() {
 // ══════ SETTINGS ══════
 function loadSettingsForm() {
   document.getElementById('cfg-script-url').value = SETTINGS.scriptUrl || '';
+  const adminUserEl = document.getElementById('cfg-admin-user');
+  if (adminUserEl && !adminUserEl.value.trim()) {
+    adminUserEl.value = SETTINGS.lastCloudUsername || window.TTBackendSession?.principal || '';
+  }
   ttSettingsSnapshotVersion = Number(SETTINGS.sharedConfigVersion || 0);
   const geminiKeyEl = document.getElementById('cfg-gemini-key');
   if (geminiKeyEl) geminiKeyEl.value = '';

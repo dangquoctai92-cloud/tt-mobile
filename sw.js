@@ -1,5 +1,5 @@
 /* T&T Mobile app-shell cache v6: atomic versioned release bundle; only public static assets, never API keys or customer data. */
-const TT_BUILD_ID = '20261124-pwa-2040';
+const TT_BUILD_ID = '20261125-pwa-1525';
 const TT_SHELL_CACHE = 'tt-mobile-shell-' + TT_BUILD_ID;
 const TT_SHELL_ASSETS = [
   './index.html',

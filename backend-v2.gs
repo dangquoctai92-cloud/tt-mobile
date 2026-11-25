@@ -7,7 +7,7 @@ Configure ScriptProperties in the Apps Script editor:
 Create sheets UsersV2, TicketsV2, OperationsV2, ImagesV2, NotesV2, ChatV2.
 DO NOT make login accessible until PBKDF2 benchmark/rate limiting & migration audited.
 */
-const TT2_APP='tt-mobile',TT2_PROTOCOL=2,TT2_PBKDF2_ITER=150000;
+const TT2_APP='tt-mobile',TT2_PROTOCOL=2,TT2_PBKDF2_ITER=150000,TT2_SESSION_TTL_MS=30*24*60*60*1000,TT2_SESSION_RENEW_THRESHOLD_MS=20*24*60*60*1000;
 const TT2_SHEETS={
  UsersV2:['username','saltB64','hashB64','iterations','role','enabled'],
  TicketsV2:['ticketId','datasetId','revision','deleted','owner','json','updatedAt'],
@@ -291,7 +291,7 @@ function tt2Login(req){
  const token=Utilities.getUuid()+'-'+Utilities.getUuid()+'-'+Utilities.getUuid();
  const digest=tt2Sha(token),session={
   username:row[0],role:row[4],datasetId:tt2Dataset(),
-  expiresAt:Date.now()+6*60*60*1000
+  expiresAt:Date.now()+TT2_SESSION_TTL_MS
  };
  tt2Props().setProperty('TT2_SESSION_'+digest,JSON.stringify(session));
  return {ok:true,action:'login',appId:TT2_APP,protocolVersion:2,
@@ -303,13 +303,18 @@ function tt2Session(req){
  if(typeof token!=='string'||token.length<80)throw Error('AUTH_REQUIRED');
  const properties=tt2Props(),key='TT2_SESSION_'+tt2Sha(token);
  const value=properties.getProperty(key),session=value&&JSON.parse(value);
- if(!session||session.expiresAt<Date.now()||session.datasetId!==tt2Dataset())
+ const now=Date.now();
+ if(!session||session.expiresAt<now||session.datasetId!==tt2Dataset())
   throw Error('AUTH_REQUIRED');
  // Re-read server principal on EVERY request: role changes, disabled users and
  // deleted accounts must revoke cached sessions before replay/ACK.
  const found=tt2Find('UsersV2',0,session.username),u=found&&found.row;
  if(!u||u[5]!==true||!['admin','manager','viewer'].includes(String(u[4])))
   throw Error('AUTH_REVOKED');
+ if(session.expiresAt-now<TT2_SESSION_RENEW_THRESHOLD_MS){
+  session.expiresAt=now+TT2_SESSION_TTL_MS;
+  try{properties.setProperty(key,JSON.stringify(session));}catch(_){}
+ }
  return {username:String(u[0]),role:String(u[4]),datasetId:session.datasetId,
    expiresAt:session.expiresAt};
 }
@@ -1259,7 +1264,7 @@ function tt2Handle(req){
   const session=tt2Session(req);
   if(__tt2Ctx)__tt2Ctx.timing.authMs=Date.now()-ta0;
   if(action==='whoami')return {ok:true,action:'whoami',appId:TT2_APP,protocolVersion:2,
-    datasetId:tt2Dataset(),actor:{username:session.username,role:session.role}};
+    datasetId:tt2Dataset(),expiresAt:session.expiresAt,actor:{username:session.username,role:session.role}};
   if(action==='drive_storage')return tt2DriveStorage(session);
   if(action==='logout'){
    tt2Props().deleteProperty('TT2_SESSION_'+tt2Sha(req.sessionToken));
