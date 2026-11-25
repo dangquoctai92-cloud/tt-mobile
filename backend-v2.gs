@@ -321,7 +321,7 @@ function tt2Session(req){
 function tt2Can(session,action,owner){
  if(!session)throw Error('AUTH_REQUIRED');
  if(session.role==='admin')return true;
- if(action==='snapshot'||action==='chat_read'||action==='notes_read')return true;
+ if(action==='snapshot'||action==='chat_read'||action==='notes_read'||action==='image_get')return true;
  if(action==='drive_storage'&&session.role==='manager')return true;
  if(session.role!=='manager')throw Error('PERMISSION_DENIED');
  if(['upsert','delete','notes_write','chat_write'].includes(action)&&owner===session.username)return true;
@@ -1251,6 +1251,29 @@ function tt2DriveStorage(session){
  };
 }
 
+function tt2ImageGet(req,session){
+ tt2Can(session,'image_get');
+ const fileId=String(req&&req.fileId||'').trim();
+ if(!/^[A-Za-z0-9_-]{10,120}$/.test(fileId))throw Error('INVALID_IMAGE_ID');
+ const datasetId=tt2Dataset();
+ const registered=tt2Rows('ImagesV2').some(r=>String(r[1]||'')===datasetId&&String(r[3]||'')===fileId);
+ const file=DriveApp.getFileById(fileId);
+ if(!registered){
+  const folderId=tt2DriveFolder().getId();
+  let inFolder=false;
+  const parents=file.getParents();
+  while(parents.hasNext()){if(parents.next().getId()===folderId){inFolder=true;break;}}
+  if(!inFolder)throw Error('IMAGE_NOT_AUTHORIZED');
+ }
+ const blob=file.getBlob();
+ const mimeType=String(blob.getContentType()||'image/jpeg').split(';')[0].trim().toLowerCase();
+ if(!/^image\/(?:jpeg|jpg|png|webp|gif|heic|heif)$/i.test(mimeType))throw Error('UNSUPPORTED_IMAGE_MIME');
+ const bytes=blob.getBytes();
+ if(!bytes||bytes.length>12*1024*1024)throw Error('IMAGE_TOO_LARGE');
+ return {ok:true,action:'image_get',appId:TT2_APP,protocolVersion:2,datasetId,
+   fileId,mimeType,dataUrl:'data:'+mimeType+';base64,'+Utilities.base64Encode(bytes)};
+}
+
 function tt2Handle(req){
  const tReq0=Date.now();
  __tt2Ctx=tt2NewCtx();
@@ -1266,6 +1289,7 @@ function tt2Handle(req){
   if(action==='whoami')return {ok:true,action:'whoami',appId:TT2_APP,protocolVersion:2,
     datasetId:tt2Dataset(),expiresAt:session.expiresAt,actor:{username:session.username,role:session.role}};
   if(action==='drive_storage')return tt2DriveStorage(session);
+  if(action==='image_get')return tt2ImageGet(req,session);
   if(action==='logout'){
    tt2Props().deleteProperty('TT2_SESSION_'+tt2Sha(req.sessionToken));
    return {ok:true,action:'logout'};

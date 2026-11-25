@@ -4717,7 +4717,8 @@ body:has(.modal-overlay.open) #notes-fab-wrap {
 <!-- Image Viewer -->
 <div class="img-viewer-overlay" id="img-viewer">
   <div class="img-viewer-canvas" id="viewer-canvas">
-    <img class="img-viewer-img" id="viewer-img" src="" alt="" crossorigin="anonymous">
+    <div id="viewer-loading" style="display:none;position:absolute;color:rgba(255,255,255,0.88);font-size:13px;font-weight:600;padding:10px 16px;border-radius:10px;background:rgba(15,23,42,0.78);border:1px solid rgba(255,255,255,0.14);pointer-events:none;z-index:2">⏳ Đang tải ảnh từ Google Drive…</div>
+    <img class="img-viewer-img" id="viewer-img" src="" alt="">
     <button class="img-viewer-close" onclick="closeViewer()"><i data-lucide="x" style="width:16px;height:16px"></i></button>
   </div>
   <div class="img-viewer-ui">
@@ -4838,10 +4839,10 @@ body:has(.modal-overlay.open) #notes-fab-wrap {
   </div>
 </div>
 
-<script src="./tt-candidate-data.js?v=20261125-pwa-1525"></script>
+<script src="./tt-candidate-data.js?v=20261125-pwa-1600"></script>
 <script>
 // ══════ PWA BUILD COMPATIBILITY GATE & DRAFT RECOVERY UI ══════
-const TT_EXPECTED_BUILD_ID = '20261125-pwa-1525';
+const TT_EXPECTED_BUILD_ID = '20261125-pwa-1600';
 const TT_REQUIRED_HELPER_METHODS = [
   'isReady', 'isBlocked', 'getView', 'bootstrap', 'hydrate',
   'read', 'readCanonical', 'onHydrate', 'getRecoveryStatus',
@@ -8142,10 +8143,81 @@ async function verifyDirPermission(handle) {
 }
 
 // Convert Drive URL sang dạng thumbnail có thể embed được
+const _ttDriveImgCache = new Map();
+const _ttDriveImgInFlight = new Map();
+function ttExtractDriveFileId(value) {
+  if (typeof value !== 'string' || !value) return '';
+  const url = value.trim();
+  if (url.startsWith('data:')) return '';
+  try {
+    const u = new URL(url);
+    const host = u.hostname.toLowerCase();
+    if (host === 'drive.google.com' || host === 'docs.google.com') {
+      const q = u.searchParams.get('id') || '';
+      const m = u.pathname.match(/\/d\/([A-Za-z0-9_-]+)/);
+      const id = q || (m ? m[1] : '');
+      return /^[A-Za-z0-9_-]{10,120}$/.test(id) ? id : '';
+    }
+    if (host === 'lh3.googleusercontent.com' || host.endsWith('.googleusercontent.com')) {
+      const m = u.pathname.match(/\/d\/([A-Za-z0-9_-]+)/);
+      const id = m ? m[1] : '';
+      return /^[A-Za-z0-9_-]{10,120}$/.test(id) ? id : '';
+    }
+  } catch (_) {}
+  return '';
+}
+async function ttFetchPrivateDriveImage(urlOrId) {
+  const fileId = /^[A-Za-z0-9_-]{10,120}$/.test(String(urlOrId || '').trim())
+    ? String(urlOrId).trim()
+    : ttExtractDriveFileId(urlOrId);
+  if (!fileId) return '';
+  if (_ttDriveImgCache.has(fileId)) return _ttDriveImgCache.get(fileId);
+  if (_ttDriveImgInFlight.has(fileId)) return _ttDriveImgInFlight.get(fileId);
+  const task = (async () => {
+    try {
+      if (typeof ttCloudMode !== 'function' || !ttCloudMode()) return '';
+      const cap = await ttRequireBackend();
+      const ctx = ttSessionIdentity();
+      if (!ctx.token || ctx.dataset !== cap.datasetId || ctx.endpoint !== cap.url) return '';
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 25000);
+      try {
+        const res = await fetch(cap.url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          signal: ctrl.signal,
+          body: JSON.stringify({
+            action: 'image_get',
+            appId: TT_APP_ID,
+            protocolVersion: 2,
+            datasetId: cap.datasetId,
+            sessionToken: ctx.token,
+            fileId
+          })
+        });
+        if (!res.ok) return '';
+        const data = await res.json().catch(() => null);
+        if (data && data.ok === true && typeof data.dataUrl === 'string' && /^data:image\/[a-z0-9.+-]+;base64,/i.test(data.dataUrl)) {
+          if (_ttDriveImgCache.size >= 60) {
+            const firstKey = _ttDriveImgCache.keys().next().value;
+            if (firstKey) _ttDriveImgCache.delete(firstKey);
+          }
+          _ttDriveImgCache.set(fileId, data.dataUrl);
+          return data.dataUrl;
+        }
+      } finally { clearTimeout(timer); }
+    } catch (_) {}
+    return '';
+  })().finally(() => { _ttDriveImgInFlight.delete(fileId); });
+  _ttDriveImgInFlight.set(fileId, task);
+  return task;
+}
 function driveThumb(value) {
   if(typeof value!=='string'||!value)return '';
   const url=value.trim();
   if(/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/i.test(url))return url;
+  const cachedId = ttExtractDriveFileId(url);
+  if (cachedId && _ttDriveImgCache.has(cachedId)) return _ttDriveImgCache.get(cachedId);
   try{
     const u=new URL(url);
     const host=u.hostname.toLowerCase();
@@ -8174,13 +8246,22 @@ function refreshPreview(attr) {
     empty.textContent='📷';prev.appendChild(empty);
     if(cnt)cnt.textContent='';return;
   }
-  const src=driveThumb(list[0].data||list[0].url||'');
+  const rawVal=list[0].data||list[0].url||'';
+  const src=driveThumb(rawVal);
   if(src){
-    const image=document.createElement('img');image.alt='';image.src=src;
-    image.onerror=()=>{
+    const image=document.createElement('img');image.alt='';
+    let triedProxy=false;
+    image.onerror=async ()=>{
+      if(!triedProxy && !rawVal.startsWith('data:')){
+        triedProxy=true;
+        const dataUrl=await ttFetchPrivateDriveImage(rawVal);
+        if(dataUrl && image.isConnected){ image.src=dataUrl; return; }
+      }
+      if(!image.isConnected)return;
       image.remove();const empty=document.createElement('span');
       empty.className='img-preview-empty';empty.textContent='📷';prev.prepend(empty);
     };
+    image.src=src;
     const rotate=document.createElement('button');rotate.type='button';rotate.className='img-rotate-btn';
     rotate.title='Xoay ảnh 90 độ';rotate.addEventListener('click',event=>{
       event.stopPropagation();rotateSlotImages(attr);
@@ -8204,10 +8285,15 @@ function refreshPreview(attr) {
 // Cho ảnh cũ đã bị lưu nằm ngang trên Drive (thời app còn xoay sai) — hoặc bất kỳ
 // ảnh nào chụp bị lệch. Mỗi lần bấm xoay 90° theo chiều kim đồng hồ; xoay xong ảnh
 // biến thành ảnh mới (base64) nên khi bấm Lưu/Cập nhật sẽ đẩy bản đúng hướng lên Drive.
-function xoayAnh90(src) {
+async function xoayAnh90(src) {
+  let effectiveSrc = src;
+  if (typeof src === 'string' && !src.startsWith('data:')) {
+    const proxied = await ttFetchPrivateDriveImage(src);
+    if (proxied) effectiveSrc = proxied;
+  }
   return new Promise((resolve) => {
     const img = new Image();
-    img.crossOrigin = 'anonymous';   // để tải được ảnh Drive về canvas
+    if (!effectiveSrc.startsWith('data:')) img.crossOrigin = 'anonymous';
     img.onload = () => {
       try {
         const w = img.naturalWidth || img.width;
@@ -8222,7 +8308,7 @@ function xoayAnh90(src) {
       } catch (e) { resolve(null); } // canvas bị chặn
     };
     img.onerror = () => resolve(null);
-    img.src = src;
+    img.src = effectiveSrc;
   });
 }
 
@@ -8268,12 +8354,55 @@ function openViewer(attr) {
   ttOpenDialog(document.getElementById('img-viewer'));
   initViewerDrag();
 }
+let _viewerLoadSeq = 0;
 function renderViewer() {
   const img = viewerImages[viewerIdx];
   const el = document.getElementById('viewer-img');
-  el.src = driveThumb(img.data || img.url || '');
+  const loadingEl = document.getElementById('viewer-loading');
+  if (!el || !img) return;
+  const rawVal = img.data || img.url || '';
+  const directSrc = driveThumb(rawVal);
   el.style.transform = `translate(${viewerOffX}px,${viewerOffY}px) scale(${viewerScale}) rotate(${viewerRotation}deg)`;
   document.getElementById('viewer-count').textContent = `${viewerIdx + 1} / ${viewerImages.length}`;
+  if (el.dataset.ttRawSrc === rawVal && el.complete && el.naturalWidth > 0) {
+    if (loadingEl) loadingEl.style.display = 'none';
+    return;
+  }
+  const seq = ++_viewerLoadSeq;
+  el.dataset.ttRawSrc = rawVal;
+  el.style.opacity = '0.25';
+  if (loadingEl) {
+    loadingEl.textContent = '⏳ Đang tải ảnh…';
+    loadingEl.style.display = rawVal.startsWith('data:') ? 'none' : 'block';
+  }
+  let triedProxy = false;
+  el.onload = () => {
+    if (seq !== _viewerLoadSeq) return;
+    el.style.opacity = '1';
+    if (loadingEl) loadingEl.style.display = 'none';
+  };
+  el.onerror = async () => {
+    if (seq !== _viewerLoadSeq) return;
+    if (!triedProxy && !rawVal.startsWith('data:')) {
+      triedProxy = true;
+      if (loadingEl) {
+        loadingEl.textContent = '⏳ Đang tải ảnh từ Google Drive…';
+        loadingEl.style.display = 'block';
+      }
+      const dataUrl = await ttFetchPrivateDriveImage(rawVal);
+      if (seq !== _viewerLoadSeq) return;
+      if (dataUrl) {
+        el.src = dataUrl;
+        return;
+      }
+    }
+    el.style.opacity = '1';
+    if (loadingEl) {
+      loadingEl.textContent = '✘ Không tải được ảnh này (kiểm tra kết nối Cloud v2 ở Cài đặt).';
+      loadingEl.style.display = 'block';
+    }
+  };
+  el.src = directSrc;
 }
 function viewerNav(dir) {
   viewerIdx = (viewerIdx + dir + viewerImages.length) % viewerImages.length;
@@ -8293,7 +8422,7 @@ function viewerRotate(deg) {
   renderViewer();
   if (typeof lucide !== 'undefined') lucide.createIcons();
 }
-function viewerDownload() {
+async function viewerDownload() {
   const img = viewerImages[viewerIdx];
   const src = img.data || img.url || '';
   if (!src) return;
@@ -8307,29 +8436,30 @@ function viewerDownload() {
     return;
   }
 
-  // Ảnh URL: vẽ lên canvas rồi xuất — tránh hoàn toàn CORS của fetch
+  // Nếu viewer đang hiển thị dataUrl đã tải qua backend, tải thẳng luôn
   const el = document.getElementById('viewer-img');
-  const canvas = document.createElement('canvas');
-  canvas.width = el.naturalWidth || el.width;
-  canvas.height = el.naturalHeight || el.height;
-  const ctx = canvas.getContext('2d');
-  try {
-    ctx.drawImage(el, 0, 0);
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+  if (el && typeof el.src === 'string' && el.src.startsWith('data:')) {
     const a = document.createElement('a');
-    a.href = dataUrl;
+    a.href = el.src;
     a.download = `anh_${viewerIdx + 1}.jpg`;
     a.click();
     toast('Đã tải ảnh!', 'success');
-  } catch(e) {
-    // Canvas bị taint (ảnh cross-origin chưa load xong) → dùng proxy Netlify
-    const proxyUrl = `https://images.weserv.nl/?url=${encodeURIComponent(src)}&output=jpg`;
+    return;
+  }
+
+  // Lấy trực tiếp qua backend Cloud v2 (không vướng CORS / ảnh private Drive)
+  const proxied = await ttFetchPrivateDriveImage(src);
+  if (proxied) {
     const a = document.createElement('a');
-    a.href = proxyUrl;
+    a.href = proxied;
     a.download = `anh_${viewerIdx + 1}.jpg`;
     a.click();
-    toast('Đang tải qua proxy...', 'info');
+    toast('Đã tải ảnh!', 'success');
+    return;
   }
+
+  window.open(src, '_blank', 'noopener,noreferrer');
+  toast('Đã mở ảnh trong tab mới.', 'info');
 }
 function viewerDelete() {
   if (!confirm('Bạn có chắc chắn muốn xóa ảnh này?')) return;
