@@ -4839,10 +4839,10 @@ body:has(.modal-overlay.open) #notes-fab-wrap {
   </div>
 </div>
 
-<script src="./tt-candidate-data.js?v=20261125-pwa-1600"></script>
+<script src="./tt-candidate-data.js?v=20261128-pwa-1925"></script>
 <script>
 // ══════ PWA BUILD COMPATIBILITY GATE & DRAFT RECOVERY UI ══════
-const TT_EXPECTED_BUILD_ID = '20261125-pwa-1600';
+const TT_EXPECTED_BUILD_ID = '20261128-pwa-1925';
 const TT_REQUIRED_HELPER_METHODS = [
   'isReady', 'isBlocked', 'getView', 'bootstrap', 'hydrate',
   'read', 'readCanonical', 'onHydrate', 'getRecoveryStatus',
@@ -6440,10 +6440,40 @@ function ttSyncViewFromCanonical(snapshot) {
   const openModal = document.getElementById('form-modal');
   if (openModal && openModal.classList.contains('open') && editingTicketId != null && ttFormBase && String(ttFormBase.id) === String(editingTicketId)) {
     const fresh = DB.tickets.find(t => String(t.id) === String(editingTicketId));
-    if (fresh && Number(fresh.local_revision) === Number(ttFormBase.local_revision) && !fresh.needs_sync && Number(fresh.server_revision || 0) >= Number(ttFormBase.local_revision)) {
-      ttFormBase.server_revision = fresh.server_revision;
-      delete ttFormBase.needs_sync;
-      delete ttFormBase.pending_operation_id;
+    if (fresh) {
+      if (typeof IMG_SLOTS !== 'undefined' && Array.isArray(IMG_SLOTS) && window.TTCandidateData && typeof TTCandidateData.images === 'function') {
+        const curType = fresh.ticket_type || 'repair';
+        const activeSlots = curType === 'sale' ? [
+          { attr: 'before_images' }, { attr: 'after_images' }, { attr: 'condition_images' }, { attr: 'repair_images' }
+        ] : IMG_SLOTS;
+        for (const s of activeSlots) {
+          const storeArr = imgStore[s.attr];
+          if (!Array.isArray(storeArr) || !storeArr.length) continue;
+          let freshImgs = [];
+          try { freshImgs = TTCandidateData.images(fresh, s.attr); } catch (_) { freshImgs = []; }
+          let touched = false;
+          for (let i = 0; i < storeArr.length; i++) {
+            const cur = storeArr[i];
+            if (!cur || cur.url || !cur.data || !cur.imageId) continue;
+            const match = freshImgs.find(f => f && f.url && f.imageId === cur.imageId);
+            if (match) {
+              const reconciled = { imageId: match.imageId, sha256: match.sha256 || '', url: match.url };
+              storeArr[i] = reconciled;
+              if (Array.isArray(ttFormImageBase[s.attr])) {
+                const bIdx = ttFormImageBase[s.attr].findIndex(b => b && b.imageId === cur.imageId);
+                if (bIdx >= 0) ttFormImageBase[s.attr][bIdx] = { ...reconciled };
+              }
+              touched = true;
+            }
+          }
+          if (touched && typeof refreshPreview === 'function') refreshPreview(s.attr);
+        }
+      }
+      if (Number(fresh.local_revision) === Number(ttFormBase.local_revision) && !fresh.needs_sync && Number(fresh.server_revision || 0) >= Number(ttFormBase.local_revision)) {
+        ttFormBase.server_revision = fresh.server_revision;
+        delete ttFormBase.needs_sync;
+        delete ttFormBase.pending_operation_id;
+      }
     }
   }
   ttReconcileFormStaleBanner();
@@ -6458,7 +6488,7 @@ if (ttHelperCompatible() && window.TTCandidateData && TTCandidateData.onHydrate)
   }
 }
 window.addEventListener('tt-projection-stale', () => {
-  if (typeof toast === 'function') toast('Đã lưu vào bộ nhớ bền vững IDB; cache hiển thị localStorage đầy.', 'warning');
+  console.warn('[IDB] localStorage mirror skipped (quota full); canonical IDB is durable.');
 });
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && ttHelperCompatible() && window.TTCandidateData?.hydrate) {
@@ -8005,6 +8035,9 @@ function handleImageInput(e) {
           }
           refreshPreview(attr);
           ttReconcileFormStaleBanner(capturedSession);
+          if (cleanScriptUrl(SETTINGS.scriptUrl) && ttCloudMode()) {
+            void ttScheduleOutboxSync();
+          }
         } else {
           toast('Ảnh của phiên trước đã lưu an toàn vào phiếu/nháp A; không đưa vào form B.','info');
         }

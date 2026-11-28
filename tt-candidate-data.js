@@ -2,7 +2,7 @@
 (function(){
 'use strict';
 const LOCK='tt-mobile:db:write-v2', KEY='suachua_db', PREFIX='tt_v2img_', DRAFT='tt_v2draft_', DRAFT_IMG='tt_v2draft_image_';
-const LOCAL_SCHEMA_VERSION=3, CLIENT_PROTOCOL_VERSION=2, BUILD_ID='20261125-pwa-1600';
+const LOCAL_SCHEMA_VERSION=3, CLIENT_PROTOCOL_VERSION=2, BUILD_ID='20261128-pwa-1925';
 const slots=['before_images','after_images','condition_images','repair_images'];
 let held=false;
 const RECOVERY='tt_v2_recovery_status',BACKUP='tt_v2_good_snapshot';
@@ -15,6 +15,29 @@ let canonicalCache=null,canonicalFromIdb=false,ready=false,bootstrapStatus='LOAD
 let projectionStale=false,lastProjectionError=null,canonicalEpoch=0,currentLineageId=null,currentActiveBinding=null,pendingActiveBinding=null,versionChangeBlocked=false;
 const idbAssetCache=new Map(),idbDraftCache=new Map(),hydrateListeners=new Set();
 
+function pruneLocalStorageImageMirrors(snapshot){
+ try{
+  const keep=new Set();
+  if(!canonicalFromIdb && snapshot){
+   for(const t of (snapshot.tickets||[])){
+    if(t&&t.__imageRefs)for(const ptr of Object.values(t.__imageRefs))if(typeof ptr==='string'&&ptr)keep.add(PREFIX+ptr);
+   }
+   for(const op of (snapshot.outbox||[])){
+    if(op&&op.row&&op.row.__imageRefs)for(const ptr of Object.values(op.row.__imageRefs))if(typeof ptr==='string'&&ptr)keep.add(PREFIX+ptr);
+   }
+  }
+  const toRemove=[];
+  for(let i=0;i<localStorage.length;i++){
+   const k=localStorage.key(i);
+   if(!k)continue;
+   if(k.startsWith(PREFIX)&&!keep.has(k))toRemove.push(k);
+   else if(k.startsWith(DRAFT_IMG)&&(canonicalFromIdb||idbDraftCache.has('draft_img:'+k.slice(DRAFT_IMG.length))))toRemove.push(k);
+   else if(k.startsWith(DRAFT)&&!k.startsWith(DRAFT_IMG)&&idbDraftCache.has('draft:'+k.slice(DRAFT.length)))toRemove.push(k);
+  }
+  for(const k of toRemove){try{localStorage.removeItem(k);}catch(_){}}
+  return toRemove.length;
+ }catch(_){return 0;}
+}
 function notifyHydrate(snapshot,meta){
  for(const fn of hydrateListeners){try{fn(clone(snapshot),meta)}catch(e){console.warn('[hydrate listener]',e)}}
  if(typeof window!=='undefined'&&typeof window.dispatchEvent==='function'){
@@ -241,6 +264,7 @@ async function readIdbState(updateCache=true){
       canonicalFromIdb=true;
       canonicalEpoch=Number(ticketsRec.epoch)||0;
       ready=true;bootstrapStatus='VALID';bootstrapError=null;
+      pruneLocalStorageImageMirrors(canonicalCache);
       const mirror=localStorage.getItem(KEY);
       projectionStale=mirror!==JSON.stringify(canonicalCache);
       if(typeof window!=='undefined'&&window.DB){
@@ -499,18 +523,16 @@ async function lock(callback){
      try{return callback()}finally{activeRecord=null;activeStage=null}
     },
     value=>{
+     // IDB is canonical for image sidecars; never bloat tiny 5MB mobile localStorage with raw base64 copies.
+     pruneLocalStorageImageMirrors(value);
      const bytes=JSON.stringify(value);
-     for(const t of value.tickets){
-      if(t.__imageRefs){
-       for(const pointer of Object.values(t.__imageRefs)){
-        const rawArr=idbAssetCache.get(PREFIX+pointer);
-        if(rawArr&&localStorage.getItem(PREFIX+pointer)===null){
-         localStorage.setItem(PREFIX+pointer,JSON.stringify(rawArr));
-        }
-       }
-      }
+     try{
+      localStorage.setItem(KEY,bytes);
+     }catch(e){
+      // Free stale mirror so critical small keys (settings, 30d cloud session) never hit QuotaExceededError.
+      try{localStorage.removeItem(KEY);}catch(_){}
+      throw e;
      }
-     localStorage.setItem(KEY,bytes);
      if(localStorage.getItem(KEY)!==bytes)throw Error('COMPAT_PROJECTION_FAILED');
     });
   }finally{held=false}
@@ -646,16 +668,13 @@ async function draft(draftId,attr,photo){
     try{
      idbDraftCache.set('draft_img:'+itemId,clone(photo));
      idbDraftCache.set(idbKey,clone(nextManifest));
-     let projOk=true;
-     try{
-      localStorage.setItem(DRAFT_IMG+itemId,JSON.stringify(photo));
-      localStorage.setItem(key,JSON.stringify(nextManifest));
-     }catch(e){projOk=false;projectionStale=true;lastProjectionError=e;}
+     // Draft photo is already durable in IndexedDB; do not duplicate large base64 into 5MB localStorage.
+     pruneLocalStorageImageMirrors(canonicalCache);
      if(typeof window!=='undefined'&&typeof window.dispatchEvent==='function'){
-      try{window.dispatchEvent(new CustomEvent('tt-draft-committed',{detail:{draftId,itemId,attr,durable:true,projectionStale:!projOk}}))}catch(_){}
+      try{window.dispatchEvent(new CustomEvent('tt-draft-committed',{detail:{draftId,itemId,attr,durable:true,projectionStale:false}}))}catch(_){}
      }
      settled=true;
-     resolve({ok:true,durable:true,storage:'idb',draftId,itemId,projectionStale:!projOk});
+     resolve({ok:true,durable:true,storage:'idb',draftId,itemId,projectionStale:false});
     }catch(e){failOnce(e)}
    };
    const metaReq=store.get('meta:schema');
