@@ -812,6 +812,7 @@ function tt2ImageReferences(row,receipts,j){
   clean[attr]=JSON.stringify(verified);
   delete clean[attr+'_raw'];delete clean[attr+'_urls'];
  }
+ delete clean.__imageRefs;delete clean.needs_sync;delete clean.pending_operation_id;
  return clean;
 }
 function tt2CompletedTicketReplay(j,found){

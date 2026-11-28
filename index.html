@@ -4839,10 +4839,10 @@ body:has(.modal-overlay.open) #notes-fab-wrap {
   </div>
 </div>
 
-<script src="./tt-candidate-data.js?v=20261128-pwa-1925"></script>
+<script src="./tt-candidate-data.js?v=20261128-pwa-2000"></script>
 <script>
 // ══════ PWA BUILD COMPATIBILITY GATE & DRAFT RECOVERY UI ══════
-const TT_EXPECTED_BUILD_ID = '20261128-pwa-1925';
+const TT_EXPECTED_BUILD_ID = '20261128-pwa-2000';
 const TT_REQUIRED_HELPER_METHODS = [
   'isReady', 'isBlocked', 'getView', 'bootstrap', 'hydrate',
   'read', 'readCanonical', 'onHydrate', 'getRecoveryStatus',
@@ -7990,11 +7990,11 @@ function handleImageInput(e) {
         img.onerror=()=>reject(new Error('PNG/JPEG không giải mã được'));
         img.src=raw;
       });
-      const MAX=1400;let w=image.naturalWidth||image.width,h=image.naturalHeight||image.height;
+      const MAX=1200;let w=image.naturalWidth||image.width,h=image.naturalHeight||image.height;
       if(w>MAX||h>MAX){const scale=Math.min(MAX/w,MAX/h);w=Math.max(1,Math.round(w*scale));h=Math.max(1,Math.round(h*scale));}
       const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
       canvas.getContext('2d').drawImage(image,0,0,w,h);
-      const photo={name:'photo.jpg',data:canvas.toDataURL('image/jpeg',0.86),imageId:crypto.randomUUID()};
+      const photo={name:'photo.jpg',data:canvas.toDataURL('image/jpeg',0.82),imageId:crypto.randomUUID()};
       // Durable target A commit occurs before touching form B or marking processing done.
       if(!ttHelperCompatible()){
         ttRenderCompatBlockedBanner();
@@ -14939,6 +14939,13 @@ if ('serviceWorker' in navigator) {
           if (!ttHelperCompatible()) {
             void reg.update().catch(() => {});
           }
+          let lastSwCheck = Date.now();
+          document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible' && Date.now() - lastSwCheck > 120000) {
+              lastSwCheck = Date.now();
+              void reg.update().catch(() => {});
+            }
+          });
         }
       } catch (_) {}
       console.log('SW registered!', reg);

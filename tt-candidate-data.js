@@ -2,7 +2,7 @@
 (function(){
 'use strict';
 const LOCK='tt-mobile:db:write-v2', KEY='suachua_db', PREFIX='tt_v2img_', DRAFT='tt_v2draft_', DRAFT_IMG='tt_v2draft_image_';
-const LOCAL_SCHEMA_VERSION=3, CLIENT_PROTOCOL_VERSION=2, BUILD_ID='20261128-pwa-1925';
+const LOCAL_SCHEMA_VERSION=3, CLIENT_PROTOCOL_VERSION=2, BUILD_ID='20261128-pwa-2000';
 const slots=['before_images','after_images','condition_images','repair_images'];
 let held=false;
 const RECOVERY='tt_v2_recovery_status',BACKUP='tt_v2_good_snapshot';
@@ -18,6 +18,12 @@ const idbAssetCache=new Map(),idbDraftCache=new Map(),hydrateListeners=new Set()
 function pruneLocalStorageImageMirrors(snapshot){
  try{
   const keep=new Set();
+  const ticketById=new Map();
+  if(snapshot&&Array.isArray(snapshot.tickets)){
+   for(const t of snapshot.tickets){
+    if(t&&t.id!=null)ticketById.set(String(t.id),t);
+   }
+  }
   if(!canonicalFromIdb && snapshot){
    for(const t of (snapshot.tickets||[])){
     if(t&&t.__imageRefs)for(const ptr of Object.values(t.__imageRefs))if(typeof ptr==='string'&&ptr)keep.add(PREFIX+ptr);
@@ -33,8 +39,20 @@ function pruneLocalStorageImageMirrors(snapshot){
    if(k.startsWith(PREFIX)&&!keep.has(k))toRemove.push(k);
    else if(k.startsWith(DRAFT_IMG)&&(canonicalFromIdb||idbDraftCache.has('draft_img:'+k.slice(DRAFT_IMG.length))))toRemove.push(k);
    else if(k.startsWith(DRAFT)&&!k.startsWith(DRAFT_IMG)&&idbDraftCache.has('draft:'+k.slice(DRAFT.length)))toRemove.push(k);
+   else if(canonicalFromIdb && k.startsWith('img_')){
+    const m=/^img_(.+)_(before_images|after_images|condition_images|repair_images)$/.exec(k);
+    if(m){
+     const ownerT=ticketById.get(m[1]);
+     const pointer=ownerT&&ownerT.__imageRefs&&ownerT.__imageRefs[m[2]];
+     if(!ownerT || pointer)toRemove.push(k);
+    }
+   }
   }
   for(const k of toRemove){try{localStorage.removeItem(k);}catch(_){}}
+  if(canonicalFromIdb){
+   const keyRaw=localStorage.getItem(KEY);
+   if(keyRaw && keyRaw.length>384*1024){try{localStorage.removeItem(KEY);}catch(_){}}
+  }
   return toRemove.length;
  }catch(_){return 0;}
 }
@@ -266,7 +284,7 @@ async function readIdbState(updateCache=true){
       ready=true;bootstrapStatus='VALID';bootstrapError=null;
       pruneLocalStorageImageMirrors(canonicalCache);
       const mirror=localStorage.getItem(KEY);
-      projectionStale=mirror!==JSON.stringify(canonicalCache);
+      projectionStale=!!mirror && mirror!==JSON.stringify(canonicalCache);
       if(typeof window!=='undefined'&&window.DB){
        const demos=Array.isArray(window.DB.tickets)?window.DB.tickets.filter(t=>t&&t.__demo):[];
        window.DB.tickets=[...clone(canonicalCache.tickets),...demos];
@@ -523,9 +541,13 @@ async function lock(callback){
      try{return callback()}finally{activeRecord=null;activeStage=null}
     },
     value=>{
-     // IDB is canonical for image sidecars; never bloat tiny 5MB mobile localStorage with raw base64 copies.
+     // IDB is canonical for image sidecars; never bloat tiny 5MB mobile localStorage.
      pruneLocalStorageImageMirrors(value);
      const bytes=JSON.stringify(value);
+     if(canonicalFromIdb && bytes.length>384*1024){
+      try{localStorage.removeItem(KEY);}catch(_){}
+      return;
+     }
      try{
       localStorage.setItem(KEY,bytes);
      }catch(e){
